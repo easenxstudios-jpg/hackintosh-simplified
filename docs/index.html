@@ -4,82 +4,407 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hackintosh Simplified</title>
-<meta name="description" content="A free, open-source macOS app that checks a hackintosh and helps with Wi-Fi, Bluetooth, sound, USB and OpenCore problems.">
+<meta name="description" content="A free, open-source Mac app that checks your hackintosh, explains what's wrong, and helps fix what it safely can.">
+<meta property="og:title" content="Hackintosh Simplified">
+<meta property="og:description" content="Check your hackintosh in one scan. Free and open source.">
+<meta property="og:image" content="https://easenxstudios-jpg.github.io/hackintosh-simplified/icon.png">
+<meta name="theme-color" content="#000000">
 <link rel="icon" href="icon.png">
 <style>
-/* Layout: one column that reads like a scan report, because the scan is the product. */
-:root { --bg:#f3f6ff; --fg:#0d1640; --muted:#4a5580; --line:#d3dcf5; --panel:#ffffff; --accent:#1f4fe0; --ok:#0a8a57; --warn:#a85f00; --bad:#c02a3a;
-  --mono: ui-monospace, "SF Mono", Menlo, monospace; --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
-@media (prefers-color-scheme: dark) { :root { --bg:#090e2a; --fg:#eaf0ff; --muted:#a3aed6; --line:#26305f; --panel:#111840; --accent:#7ea2ff; --ok:#4fdca5; --warn:#f2b45a; --bad:#ff8592; color-scheme: dark; } }
+/* Layout: a product film you scroll through. Two pinned 3D scenes, then glass panels. One deliberate dark look. */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --fg: #f5f5f7;
+  --muted: #a1a1a6;
+  --faint: #6e6e73;
+  --glass: rgba(255, 255, 255, .065);
+  --rim: rgba(255, 255, 255, .15);
+  --blue: #2997ff;
+  --deep: #1b4fe8;
+  --mint: #5cf2b4;
+  --amber: #ffc56b;
+  --red: #ff7b86;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
 * { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.6 var(--sans); padding-inline:max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
-main { max-width:720px; margin-inline:auto; padding-block:56px; display:grid; gap:48px; }
-header { display:grid; gap:16px; justify-items:start; }
-header img { width:128px; height:128px; }
-h1 { margin:0; font-size:clamp(2.2rem,7vw,3.4rem); line-height:1.05; letter-spacing:-.02em; text-wrap:balance; }
-h2 { margin:0 0 12px; font-size:1.3rem; }
-p { margin:0; max-width:62ch; color:var(--muted); }
-.actions { display:flex; flex-wrap:wrap; gap:12px; }
-a { color:var(--accent); }
-a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
-.btn { padding:12px 20px; border-radius:10px; border:1px solid var(--accent); font-weight:600; text-decoration:none; }
-.btn.primary { background:var(--accent); color:var(--bg); }
-.scan { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 20px; font:14px/1.5 var(--mono); overflow-x:auto; }
-.scan div { display:grid; grid-template-columns:18ch 1fr; gap:12px; padding-block:6px; min-width:460px; }
-.ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
-.note { border:1px solid var(--warn); border-radius:12px; padding:16px 20px; }
-.note p { color:var(--fg); }
-ol, ul { margin:0; padding-left:1.3em; color:var(--muted); display:grid; gap:8px; max-width:62ch; }
-footer { color:var(--muted); font-size:15px; }
+html { background: var(--bg); scroll-behavior: smooth; scroll-padding-top: 64px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 17px/1.47 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: clip; }
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; }
+a:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 8px; }
+.wrap { width: min(1080px, 100%); margin-inline: auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+
+/* Navigation */
+.nav { position: sticky; top: 0; z-index: 50; background: rgba(0, 0, 0, .68); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.nav .wrap { display: flex; align-items: center; gap: 24px; height: 48px; font-size: 13px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; margin-right: auto; white-space: nowrap; }
+.brand img { width: 24px; height: 24px; }
+.nav a:not(.brand):not(.pill) { color: #d6d6db; text-decoration: none; transition: color .2s; }
+.nav a:not(.brand):not(.pill):hover { color: #fff; }
+.pill { display: inline-flex; align-items: center; justify-content: center; border-radius: 980px; font-weight: 500; text-decoration: none; background: var(--blue); color: #001; transition: transform .35s var(--ease), box-shadow .35s var(--ease), background .2s; }
+.pill:hover { transform: scale(1.04); background: #58adff; box-shadow: 0 0 34px rgba(41, 151, 255, .5); }
+.nav .pill { padding: 4px 12px; font-size: 12px; }
+
+/* Hero scene */
+.hero { position: relative; height: 230vh; height: 230svh; }
+.hero-pin { position: sticky; top: 48px; height: calc(100vh - 48px); height: calc(100svh - 48px); min-height: 620px; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: clamp(28px, 5vh, 56px); }
+.aurora { position: absolute; inset: -20%; pointer-events: none; }
+.aurora i { position: absolute; border-radius: 50%; filter: blur(90px); will-change: transform; }
+.aurora i:nth-child(1) { width: 52vw; height: 52vw; left: 26%; top: 34%; background: rgba(27, 79, 232, .55); animation: drift1 16s ease-in-out infinite alternate; }
+.aurora i:nth-child(2) { width: 30vw; height: 30vw; left: 54%; top: 52%; background: rgba(40, 214, 150, .24); animation: drift2 19s ease-in-out infinite alternate; }
+.aurora i:nth-child(3) { width: 26vw; height: 26vw; left: 22%; top: 56%; background: rgba(122, 88, 255, .28); animation: drift3 13s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate3d(8vw, -6vh, 0) scale(1.15); } }
+@keyframes drift2 { to { transform: translate3d(-14vw, -10vh, 0) scale(.85); } }
+@keyframes drift3 { to { transform: translate3d(12vw, 8vh, 0) scale(1.2); } }
+.eyebrow { position: relative; margin: 0; color: var(--mint); font-size: clamp(15px, 1.6vw, 19px); font-weight: 600; }
+h1 { position: relative; margin: 6px 0 0; font-size: clamp(44px, 8.4vw, 96px); line-height: 1.03; font-weight: 700; letter-spacing: -.035em; text-wrap: balance; background: linear-gradient(180deg, #fff 30%, #9fb6e8 110%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: .08em; }
+.lede { position: relative; margin: 10px 0 0; max-width: 34em; padding-inline: 20px; color: var(--muted); font-size: clamp(17px, 2vw, 22px); line-height: 1.3; letter-spacing: -.01em; }
+.cta { position: relative; z-index: 3; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 22px; margin-top: 20px; padding-inline: 20px; }
+.cta .pill { padding: 11px 22px; font-size: 16px; }
+.link { color: var(--blue); text-decoration: none; font-size: 16px; }
+.link:hover { text-decoration: underline; }
+.fine { position: relative; z-index: 3; margin: 10px 0 0; font-size: 12px; color: #86868b; }
+
+.stage { position: relative; flex: 1; width: 100%; min-height: 240px; display: grid; place-items: center; perspective: 1400px; perspective-origin: 50% 40%; transform: translate3d(0, calc(var(--pr, 0) * -24vh), 0); }
+.eyebrow, h1, .lede, .cta, .fine { opacity: calc(1 - var(--pr, 0) * 1.6); transform: translate3d(0, calc(var(--pr, 0) * -40px), 0) scale(calc(1 - var(--pr, 0) * .06)); }
+.hero-pin.past .cta, .hero-pin.past .fine { pointer-events: none; }
+.float { --s: clamp(190px, 34vh, 360px); width: var(--s); height: var(--s); transform-style: preserve-3d; animation: bob 7s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translate3d(0, -14px, 0) rotateZ(.7deg); } }
+.stack { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; --e: .1; --r: 0; --tx: 0deg; --ty: 0deg;
+  transform: rotateX(calc(var(--r) * 54deg + var(--ty))) rotateY(var(--tx)) rotateZ(calc(var(--r) * -28deg)) scale(calc(1 - var(--r) * .1)); transition: --tx .2s; }
+.plane { position: absolute; inset: 0; backface-visibility: visible; transform: translateZ(calc(var(--e) * var(--z) * 1px)); }
+.plane img { width: 100%; height: 100%; }
+.p-base { --z: -130; border-radius: 22.4%; background: linear-gradient(180deg, #2554f5, #0d1461); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .5), inset 0 -1px 2px rgba(255, 255, 255, .15), 0 40px 90px rgba(20, 70, 240, .55); }
+.p-letter { --z: 20; filter: drop-shadow(0 12px 18px rgba(0, 0, 40, .45)); opacity: .96; }
+.p-badge { --z: 120; filter: drop-shadow(0 14px 22px rgba(0, 60, 40, .55)); }
+.p-check { --z: 190; filter: drop-shadow(0 6px 8px rgba(0, 50, 30, .4)); }
+.p-glass { --z: 260; border-radius: 22.4%; border: 1px solid rgba(255, 255, 255, calc(var(--r) * .4 + .05)); background: linear-gradient(135deg, rgba(255, 255, 255, calc(.03 + var(--r) * .14)) 0%, rgba(255, 255, 255, 0) 46%), radial-gradient(90% 60% at var(--gx, 30%) var(--gy, 12%), rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 70%); }
+.caption { position: absolute; left: 0; right: 0; bottom: clamp(14px, 4vh, 40px); z-index: 4; margin: 0; padding-inline: 20px; font-size: clamp(22px, 3.4vw, 40px); font-weight: 600; letter-spacing: -.022em; line-height: 1.12; text-wrap: balance; opacity: var(--cap, 0); transform: translate3d(0, calc((1 - var(--cap, 0)) * 24px), 0); text-shadow: 0 2px 30px #000; }
+
+/* Scan scene */
+.scan { position: relative; height: 280vh; height: 280svh; background: linear-gradient(180deg, #000, #05070f 30%, #05070f 80%, #000); }
+.scan-pin { position: sticky; top: 48px; height: calc(100vh - 48px); height: calc(100svh - 48px); min-height: 600px; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(16px, 3vh, 32px); padding-inline: 20px; }
+.h2 { margin: 0; font-size: clamp(32px, 5.4vw, 64px); line-height: 1.06; font-weight: 700; letter-spacing: -.03em; text-align: center; text-wrap: balance; }
+.h2 span { color: var(--faint); }
+.persp { width: min(880px, 100%); perspective: 1600px; perspective-origin: 50% 20%; min-width: 0; }
+.window { --p: 0; display: grid; grid-template-columns: 196px minmax(0, 1fr); border-radius: 16px; overflow: hidden; background: rgba(28, 30, 40, .78); border: 1px solid var(--rim); box-shadow: 0 50px 120px rgba(0, 0, 0, .8), 0 0 90px rgba(41, 110, 255, calc(var(--p) * .3)); transform-origin: 50% 100%; transform: rotateX(calc((1 - var(--p)) * 46deg)) rotateZ(calc((1 - var(--p)) * -4deg)) translate3d(0, calc((1 - var(--p)) * 60px), 0) scale(calc(.82 + var(--p) * .18)); will-change: transform; }
+.side { padding: 14px 12px; background: rgba(255, 255, 255, .045); border-right: 1px solid rgba(255, 255, 255, .08); font-size: 13px; min-width: 0; }
+.lights { display: flex; gap: 7px; margin-bottom: 16px; }
+.lights i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
+.lights i:nth-child(2) { background: #febc2e; }
+.lights i:nth-child(3) { background: #28c840; }
+.side ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; color: #cfd0d6; }
+.side li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 6px; }
+.side li:first-child { background: var(--deep); color: #fff; }
+.dot { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--c, #555); flex: none; }
+.main { padding: 16px 20px 18px; min-width: 0; }
+.main-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.main-head b { font-size: clamp(16px, 2.2vw, 21px); letter-spacing: -.01em; }
+.main-head small { color: var(--faint); font-size: 12px; }
+.bar { height: 4px; margin-block: 12px 10px; border-radius: 4px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.bar i { display: block; height: 100%; width: calc(var(--p) * 100%); background: linear-gradient(90deg, var(--blue), var(--mint)); border-radius: 4px; }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.rows li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, .07); font-size: clamp(13px, 1.5vw, 15px); transition: opacity .45s, transform .55s var(--ease); }
+.rows li:first-child { border-top: 0; }
+.rows em { font-style: normal; font-size: 12px; color: var(--c); white-space: nowrap; }
+.rows svg { width: 15px; height: 15px; align-self: center; color: var(--c); }
+.ok { --c: var(--mint); } .warn { --c: var(--amber); } .bad { --c: var(--red); }
+.js .rows li.wait { opacity: .22; transform: translate3d(14px, 0, 0); }
+.scan-note { margin: 0; color: #86868b; font-size: 12px; text-align: center; }
+
+/* Ring */
+.ring-sec { padding-block: clamp(72px, 12vh, 140px) clamp(50px, 8vh, 90px); overflow: hidden; }
+.ring-stage { height: clamp(150px, 26vw, 250px); margin-top: 26px; perspective: 1100px; display: grid; place-items: center; }
+.ring { position: relative; width: 150px; height: 46px; transform-style: preserve-3d; animation: spin 38s linear infinite; }
+.ring:hover { animation-play-state: paused; }
+@keyframes spin { from { transform: rotateX(-11deg) rotateY(0); } to { transform: rotateX(-11deg) rotateY(-360deg); } }
+.ring span { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 14px; font-size: 14px; font-weight: 600; white-space: nowrap; background: linear-gradient(145deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .05)); border: 1px solid rgba(255, 255, 255, .24); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); transform: rotateY(calc(var(--i) * 36deg)) translateZ(clamp(170px, 30vw, 300px)); }
+
+/* Glass cards */
+.bento-sec { padding-block: clamp(50px, 8vh, 100px); position: relative; }
+.bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; margin-top: 40px; perspective: 1500px; }
+.card { --rx: 0deg; --ry: 0deg; --gx: 50%; --gy: 0%; position: relative; min-width: 0; grid-column: span 3; padding: clamp(22px, 3vw, 34px); border-radius: 26px; overflow: hidden; background: var(--glass); border: 1px solid var(--rim); -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%); transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform .5s var(--ease), border-color .3s; }
+.card.third { grid-column: span 2; }
+.card::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(420px circle at var(--gx) var(--gy), rgba(255, 255, 255, .15), transparent 65%); }
+.card:hover { border-color: rgba(255, 255, 255, .3); }
+.num { display: block; font-size: clamp(50px, 7vw, 84px); line-height: 1; font-weight: 700; letter-spacing: -.04em; background: linear-gradient(135deg, #fff, var(--tint, #8db4ff)); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: .1em; }
+.card h3 { margin: 8px 0 6px; font-size: clamp(19px, 2.2vw, 24px); letter-spacing: -.015em; line-height: 1.15; }
+.card p { margin: 0; color: var(--muted); }
+.blob { position: absolute; width: 60%; aspect-ratio: 1; left: 12%; top: 18%; border-radius: 50%; filter: blur(70px); opacity: .5; }
+
+/* Reveal: the resting state is always readable */
+.js .rise { transform: translate3d(0, 34px, 0) scale(.985); opacity: .35; transition: transform 1s var(--ease), opacity 1s var(--ease); }
+.js .rise.in { transform: none; opacity: 1; }
+
+/* Honest band and install */
+.note { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: start; padding: clamp(22px, 3vw, 32px); border-radius: 26px; border: 1px solid rgba(255, 197, 107, .4); background: rgba(255, 197, 107, .07); }
+.note svg { width: 28px; height: 28px; color: var(--amber); }
+.note h3 { margin: 0 0 4px; font-size: 21px; letter-spacing: -.01em; }
+.note p { margin: 0; color: #d8d3c8; }
+.steps { list-style: none; counter-reset: s; margin: 36px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.steps li { counter-increment: s; min-width: 0; padding: 26px; border-radius: 22px; background: var(--glass); border: 1px solid var(--rim); color: var(--muted); }
+.steps li::before { content: counter(s); display: grid; place-items: center; width: 32px; height: 32px; margin-bottom: 14px; border-radius: 50%; background: var(--fg); color: #000; font-weight: 700; font-size: 15px; }
+.steps b { display: block; color: var(--fg); font-size: 19px; letter-spacing: -.01em; margin-bottom: 4px; }
+.closing { text-align: center; padding-block: clamp(70px, 12vh, 130px); display: grid; justify-items: center; gap: 22px; }
+.closing img { width: 120px; height: 120px; filter: drop-shadow(0 24px 60px rgba(30, 90, 255, .6)); }
+.closing .pill { padding: 13px 28px; font-size: 18px; }
+footer { border-top: 1px solid rgba(255, 255, 255, .1); padding-block: 22px 32px; color: var(--faint); font-size: 12px; }
+footer p { margin: 0 0 6px; max-width: 90ch; }
+footer a { color: #a1a1a6; }
+
+@media (max-width: 760px) {
+  .nav .hide { display: none; }
+  .window { grid-template-columns: minmax(0, 1fr); }
+  .side { display: none; }
+  .main { padding: 14px; }
+  .rows li { grid-template-columns: 18px minmax(0, 1fr); }
+  .rows em { grid-column: 2; }
+  .card, .card.third { grid-column: span 6; }
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .aurora i { filter: blur(60px); }
+  .aurora i:nth-child(1) { width: 110vw; height: 110vw; left: 0; top: 40%; }
+  .aurora i:nth-child(2) { width: 70vw; height: 70vw; left: 40%; }
+  .aurora i:nth-child(3) { width: 60vw; height: 60vw; left: 0; }
+  .ring { width: 118px; height: 40px; }
+  .ring span { font-size: 12px; }
+}
+@media (max-height: 720px) {
+  .rows li { padding: 5px 0; }
+  .h2 { font-size: clamp(28px, 4.2vw, 44px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .hero, .scan { height: auto; }
+  .hero-pin, .scan-pin { position: relative; top: 0; height: auto; padding-block: 32px; }
+  .stage { height: 340px; flex: none; }
+  .eyebrow, h1, .lede, .cta, .fine, .stage { opacity: 1; transform: none; }
+  .caption { position: relative; opacity: 1; transform: none; bottom: auto; }
+  .window { transform: none; --p: 1; }
+  .js .rows li.wait { opacity: 1; transform: none; }
+  .js .rise { opacity: 1; transform: none; }
+}
 </style>
+<script>document.documentElement.classList.add("js")</script>
 </head>
 <body>
-<main>
-  <header>
-    <img src="icon.png" alt="Hackintosh Simplified icon: a white letter H with a green checkmark badge" width="128" height="128">
-    <h1>Hackintosh Simplified</h1>
-    <p>A free, open-source Mac app that checks your hackintosh, tells you what's wrong in plain words, and helps fix what it safely can.</p>
-    <div class="actions">
-      <a class="btn primary" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases">Download for Intel Macs</a>
-      <a class="btn" href="https://github.com/easenxstudios-jpg/hackintosh-simplified">View source on GitHub</a>
+
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="icon.png" alt="" width="24" height="24">Hackintosh Simplified</a>
+    <a class="hide" href="#scan">Scan</a>
+    <a class="hide" href="#features">Features</a>
+    <a class="hide" href="#install">Install</a>
+    <a class="hide" href="https://github.com/easenxstudios-jpg/hackintosh-simplified">GitHub</a>
+    <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.1.1/HackintoshSimplified-0.1.1.dmg">Download</a>
+  </div>
+</nav>
+
+<main id="top">
+  <section class="hero" id="hero">
+    <div class="hero-pin">
+      <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="eyebrow">Free and open source</p>
+      <h1>Your hackintosh.<br>Simplified.</h1>
+      <p class="lede">One scan checks your Mac, explains what's wrong in plain words, and helps fix what it safely can.</p>
+      <div class="cta">
+        <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.1.1/HackintoshSimplified-0.1.1.dmg">Download for Intel Macs</a>
+        <a class="link" href="https://github.com/easenxstudios-jpg/hackintosh-simplified">View the source ›</a>
+      </div>
+      <p class="fine">Version 0.1.1 · Early preview · macOS 13 or later</p>
+      <div class="stage" id="stage">
+        <div class="float">
+          <div class="stack" id="stack" role="img" aria-label="The app icon, a glass letter H with a green checkmark badge, separating into layers">
+            <div class="plane p-base"></div>
+            <div class="plane p-letter"><img src="layers/letter.svg" alt=""></div>
+            <div class="plane p-badge"><img src="layers/badge.svg" alt=""></div>
+            <div class="plane p-check"><img src="layers/check.svg" alt=""></div>
+            <div class="plane p-glass"></div>
+          </div>
+        </div>
+      </div>
+      <p class="caption" id="caption">Drivers. Boot settings. Hardware.<br>One scan looks through every layer.</p>
     </div>
-  </header>
-
-  <section class="note" aria-label="Preview warning">
-    <p><strong>Early preview. Use it at your own risk.</strong> The scan has run on one machine. Boot fixes haven't been tried on a real EFI, and a bad boot change can stop your Mac starting. Keep a bootable USB with a working OpenCore.</p>
   </section>
 
-  <section>
-    <h2>What a scan looks like</h2>
-    <div class="scan" role="img" aria-label="Example scan results">
-      <div><span class="ok">Working</span><span>Sound, USB 3 at 5 Gb/s, Metal graphics</span></div>
-      <div><span class="warn">Needs attention</span><span>Ethernet limited to 100 Mb/s</span></div>
-      <div><span class="warn">Needs attention</span><span>Experimental Realtek Wi-Fi driver</span></div>
-      <div><span class="bad">Problem</span><span>AirDrop: no awdl0 link, no software fix known</span></div>
+  <section class="scan" id="scan">
+    <div class="scan-pin">
+      <h2 class="h2">See what's working. <span>And what isn't.</span></h2>
+      <div class="persp">
+        <div class="window" id="window">
+          <aside class="side" aria-hidden="true">
+            <div class="lights"><i></i><i></i><i></i></div>
+            <ul>
+              <li>Overview</li>
+              <li class="bad">AirDrop<span class="dot"></span></li>
+              <li class="warn">Wi-Fi<span class="dot"></span></li>
+              <li class="warn">Bluetooth<span class="dot"></span></li>
+              <li class="ok">Sound<span class="dot"></span></li>
+              <li class="ok">USB<span class="dot"></span></li>
+              <li class="ok">Graphics<span class="dot"></span></li>
+              <li class="warn">Ethernet<span class="dot"></span></li>
+            </ul>
+          </aside>
+          <div class="main">
+            <div class="main-head"><b id="scan-title">Checking your Mac…</b><small>No password needed</small></div>
+            <div class="bar"><i></i></div>
+            <ul class="rows" id="rows">
+              <li class="ok"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l4 4 8-9"/></svg><span>Sound is available</span><em>Working</em></li>
+              <li class="ok"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l4 4 8-9"/></svg><span>USB 3 connected at 5 Gb/s</span><em>Working</em></li>
+              <li class="ok"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l4 4 8-9"/></svg><span>Graphics acceleration is on</span><em>Working</em></li>
+              <li class="warn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v7M10 15.5v.1"/></svg><span>Ethernet is limited to 100 Mb/s</span><em>Needs attention</em></li>
+              <li class="warn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v7M10 15.5v.1"/></svg><span>Using an experimental Wi-Fi driver</span><em>Needs attention</em></li>
+              <li class="bad"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15"/></svg><span>AirDrop has no software fix on this card</span><em>Problem</em></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <p class="scan-note">Example from a real scan of one ASUS laptop. Your results will differ.</p>
     </div>
   </section>
 
-  <section>
-    <h2>What it does</h2>
-    <ul>
-      <li>Scans without changing anything. It needs no password and doesn't read your serial number.</li>
-      <li>Shows every change before applying a fix, and backs up your whole EFI before boot changes.</li>
-      <li>Guides you through jobs that depend on your machine, like USB maps and Wi-Fi drivers.</li>
-      <li>Says when it has no fix, instead of offering one that won't work.</li>
-    </ul>
+  <section class="ring-sec" aria-labelledby="areas">
+    <div class="wrap"><h2 class="h2 rise" id="areas">Ten areas. <span>One clear answer for each.</span></h2></div>
+    <div class="ring-stage" aria-hidden="true">
+      <div class="ring">
+        <span style="--i:0">Wi-Fi</span><span style="--i:1">Bluetooth</span><span style="--i:2">AirDrop</span><span style="--i:3">Sound</span><span style="--i:4">USB</span><span style="--i:5">Graphics</span><span style="--i:6">Ethernet</span><span style="--i:7">Date &amp; Time</span><span style="--i:8">Power</span><span style="--i:9">Boot Setup</span>
+      </div>
+    </div>
   </section>
 
-  <section>
-    <h2>Install</h2>
-    <ol>
-      <li>Download the <code>.dmg</code>. It needs an Intel processor and macOS 13 or later.</li>
-      <li>Open it and drag the app to Applications.</li>
-      <li>Open the app. macOS blocks it the first time, because it isn't notarized.</li>
-      <li>On macOS 15 or later, click <strong>Open Anyway</strong> in System Settings &gt; Privacy &amp; Security. On macOS 13 or 14, right-click the app and choose Open.</li>
-    </ol>
+  <section class="bento-sec" id="features">
+    <div class="wrap">
+      <h2 class="h2 rise">Careful by design.</h2>
+      <div class="bento">
+        <article class="card rise" data-tilt><i class="blob" style="background:#1b4fe8" aria-hidden="true"></i><span class="num">0</span><h3>passwords to scan</h3><p>The scan only reads. It changes nothing, and it doesn't read your serial number.</p></article>
+        <article class="card rise" data-tilt style="--tint:#5cf2b4"><i class="blob" style="background:#12c97f" aria-hidden="true"></i><span class="num">100%</span><h3>of your EFI backed up first</h3><p>Before any boot change, the whole folder is copied so you can restore it from inside the app.</p></article>
+        <article class="card third rise" data-tilt><h3>See it before it happens</h3><p>Every fix lists its exact changes, and nothing is written until you approve.</p></article>
+        <article class="card third rise" data-tilt><h3>Told straight</h3><p>When there's no known fix, the app says so instead of offering one that won't work.</p></article>
+        <article class="card third rise" data-tilt><h3>Stays in its lane</h3><p>It never restarts your Mac, changes SIP, or generates serial numbers.</p></article>
+      </div>
+    </div>
   </section>
 
-  <footer>MIT licensed. Not affiliated with Apple, OpenCore or any driver project. Installing macOS on non-Apple hardware may break Apple's software license, so check what applies to you.</footer>
+  <section class="bento-sec" id="install">
+    <div class="wrap">
+      <div class="note rise">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3zM12 10v5M12 18v.1"/></svg>
+        <div>
+          <h3>This is an early preview.</h3>
+          <p>The scan has run on one machine. Boot fixes haven't been tried on a real EFI, and a bad boot change can stop your Mac starting. Keep a bootable USB with a working OpenCore. Kexts come from each project's own releases, and the app can't confirm they're safe or suit your macOS version.</p>
+        </div>
+      </div>
+      <h2 class="h2 rise" style="margin-top:72px">Three steps to start.</h2>
+      <ol class="steps">
+        <li class="rise"><b>Download</b>Open the .dmg and drag the app to Applications. It needs an Intel processor and macOS 13 or later.</li>
+        <li class="rise"><b>Open</b>macOS blocks it the first time, because it isn't notarized. On macOS 15 or later, click Open Anyway in Privacy &amp; Security. On 13 or 14, right-click the app and choose Open.</li>
+        <li class="rise"><b>Scan</b>The first scan starts by itself. Before applying any fix, read what it will change.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="closing wrap">
+    <img class="rise" src="icon.png" alt="" width="120" height="120">
+    <h2 class="h2 rise">Check your hackintosh.</h2>
+    <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.1.1/HackintoshSimplified-0.1.1.dmg">Download for Intel Macs</a>
+    <a class="link" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases">All releases ›</a>
+  </section>
 </main>
+
+<footer>
+  <div class="wrap">
+    <p>Free and open source under the MIT license. <a href="https://github.com/easenxstudios-jpg/hackintosh-simplified">Source code on GitHub</a>.</p>
+    <p>Not affiliated with Apple, OpenCore or any driver project. Installing macOS on non-Apple hardware may break Apple's software license, so check what applies to you.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var $ = function (s) { return document.querySelector(s); };
+  var clamp = function (v) { return Math.min(1, Math.max(0, v)); };
+  var smooth = function (t) { return t * t * (3 - 2 * t); };
+  var pin = $(".hero-pin"), hero = $("#hero"), stack = $("#stack"), cap = $("#caption");
+  var scan = $("#scan"), win = $("#window"), title = $("#scan-title");
+  var rows = [].slice.call(document.querySelectorAll("#rows li"));
+
+  function progress(el) {
+    var r = el.getBoundingClientRect();
+    return clamp(-r.top / Math.max(1, r.height - innerHeight));
+  }
+
+  // Scroll drives both pinned scenes. Values ease toward the target so wheel steps still glide.
+  var e = .1, r = 0, s = 0, tiltX = 0, tiltY = 0, aimX = 0, aimY = 0, running = false;
+  function frame() {
+    var h = progress(hero);
+    var eTarget = .1 + smooth(clamp(h / .75)) * .9;
+    var rTarget = smooth(clamp(h / .6));
+    var sTarget = clamp((progress(scan) - .04) / .82);
+    e += (eTarget - e) * .1; r += (rTarget - r) * .1; s += (sTarget - s) * .12;
+    tiltX += (aimX - tiltX) * .08; tiltY += (aimY - tiltY) * .08;
+
+    stack.style.setProperty("--e", e.toFixed(4));
+    stack.style.setProperty("--r", r.toFixed(4));
+    pin.style.setProperty("--pr", r.toFixed(4));
+    pin.classList.toggle("past", r > .5);
+    stack.style.setProperty("--tx", tiltX.toFixed(2) + "deg");
+    stack.style.setProperty("--ty", tiltY.toFixed(2) + "deg");
+    cap.style.setProperty("--cap", clamp((h - .42) / .25).toFixed(3));
+    win.style.setProperty("--p", smooth(clamp(s / .45)).toFixed(4));
+    win.querySelector(".bar i").style.width = (s * 100).toFixed(1) + "%";
+
+    var shown = Math.floor(clamp((s - .34) / .62) * (rows.length + .001));
+    rows.forEach(function (row, i) { row.classList.toggle("wait", i >= shown); });
+    title.textContent = shown >= rows.length ? "3 things need attention" : "Checking your Mac…";
+    requestAnimationFrame(frame);
+  }
+
+  if (still) {
+    stack.style.setProperty("--e", ".6"); stack.style.setProperty("--r", ".35");
+    title.textContent = "3 things need attention";
+    win.style.setProperty("--p", "1"); win.querySelector(".bar i").style.width = "100%";
+  } else {
+    requestAnimationFrame(frame);
+
+    // The icon follows the pointer, including its highlight.
+    addEventListener("pointermove", function (ev) {
+      if (ev.pointerType === "touch") return;
+      var x = ev.clientX / innerWidth - .5, y = ev.clientY / innerHeight - .5;
+      aimX = x * 34; aimY = -y * 24;
+      var glass = $(".p-glass");
+      glass.style.setProperty("--gx", (x * 100 + 50).toFixed(0) + "%");
+      glass.style.setProperty("--gy", (y * 100 + 50).toFixed(0) + "%");
+    }, { passive: true });
+
+    // Cards tilt in 3D under the pointer.
+    document.querySelectorAll("[data-tilt]").forEach(function (card) {
+      card.addEventListener("pointermove", function (ev) {
+        if (ev.pointerType === "touch") return;
+        var b = card.getBoundingClientRect();
+        var x = (ev.clientX - b.left) / b.width, y = (ev.clientY - b.top) / b.height;
+        card.style.setProperty("--ry", ((x - .5) * 14).toFixed(2) + "deg");
+        card.style.setProperty("--rx", ((.5 - y) * 14).toFixed(2) + "deg");
+        card.style.setProperty("--gx", (x * 100).toFixed(0) + "%");
+        card.style.setProperty("--gy", (y * 100).toFixed(0) + "%");
+      });
+      card.addEventListener("pointerleave", function () {
+        card.style.setProperty("--ry", "0deg"); card.style.setProperty("--rx", "0deg");
+      });
+    });
+
+    if ("IntersectionObserver" in window) {
+      var seen = new IntersectionObserver(function (items) {
+        items.forEach(function (it) { if (it.isIntersecting) { it.target.classList.add("in"); seen.unobserve(it.target); } });
+      }, { rootMargin: "0px 0px -8% 0px" });
+      document.querySelectorAll(".rise").forEach(function (el) { seen.observe(el); });
+    } else {
+      document.querySelectorAll(".rise").forEach(function (el) { el.classList.add("in"); });
+    }
+  }
+})();
+</script>
 </body>
 </html>
