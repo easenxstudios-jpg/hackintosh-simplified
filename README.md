@@ -25,11 +25,21 @@ Backups are in `~/Library/Application Support/Hackintosh Simplified/Backups`. Th
 - **Kexts aren't verified.** Kexts run inside the macOS kernel. The app downloads them from each project's newest GitHub release and shows the source and SHA-256, but it doesn't compare that hash with a known-good value or check that the kext suits your macOS version. A compromised release would get through.
 - **It only supports OpenCore.** It turns boot fixes off if it can't confirm OpenCore and the partition it started from.
 - **Some advice comes from one machine.** The Realtek notes come from one ASUS laptop with an RTL8852CE, so your results may differ.
-- **The app isn't notarized.** The first time you open it, right-click it and choose Open.
+- **The app isn't notarized.** macOS warns that it can't check the app for malware. See [Download](#download) for how to open it.
+
+## Download
+
+Get the `.dmg` from the [Releases page](https://github.com/easenxstudios-jpg/hackintosh-simplified/releases). It needs an Intel processor and macOS 13 or later.
+
+1. Open the `.dmg` and drag the app to Applications.
+2. Open the app. macOS will block it the first time.
+3. On macOS 15 or later, go to **System Settings > Privacy & Security** and click **Open Anyway**. On macOS 13 or 14, right-click the app and choose **Open**.
+
+The download doesn't include the patched Realtek Bluetooth kexts, so that one fix tells you they're missing. See [patches/README.md](patches/README.md) to build them.
 
 ## Build
 
-There's no download yet, so you build it yourself. You need Xcode and macOS 13 or later.
+You need Xcode.
 
 ```bash
 zsh build-app.sh
@@ -37,7 +47,7 @@ zsh build-app.sh
 
 The app is in `build/`. Run the scan from Terminal with `--scan` to print a report without opening a window.
 
-The patched Realtek Bluetooth kexts aren't in this repo. Without them, that one fix tells you they're missing. See [patches/README.md](patches/README.md) to build them.
+`zsh make-release.sh` builds the public `.dmg` in `dist/`.
 
 ## Test
 

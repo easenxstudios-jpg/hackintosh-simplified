@@ -250,12 +250,12 @@ public struct KextFetcher: Sendable {
         switch origin {
         case .bundled(let folder, _):
             guard let root = bundledRoot?.appendingPathComponent(folder, isDirectory: true) else {
-                throw FixError("This copy of the app doesn't include its bundled kexts.")
+                throw FixError("This copy of the app doesn't include its bundled kexts. See patches/README.md in the project to build them.")
             }
             return try specs.map { spec in
                 let source = root.appendingPathComponent(spec.bundle, isDirectory: true)
                 guard FileManager.default.fileExists(atPath: source.path) else {
-                    throw FixError("This copy of the app doesn't include \(spec.bundle).")
+                    throw FixError("This copy of the app doesn't include \(spec.bundle). Public downloads leave out the patched Bluetooth kexts. See patches/README.md in the project to build them.")
                 }
                 let copy = stage.appendingPathComponent(spec.bundle, isDirectory: true)
                 try FileManager.default.copyItem(at: source, to: copy)

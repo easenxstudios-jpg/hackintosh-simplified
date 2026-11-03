@@ -6,3 +6,4 @@ build/
 config.plist
 Backups/
 .DS_Store
+dist/
