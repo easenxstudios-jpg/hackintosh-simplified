@@ -107,6 +107,36 @@ struct OverviewView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
                 }
+                if let facts = model.facts {
+                    let safe = FixPlanner.safeFixes(findings: model.findings, facts: facts)
+                    if !safe.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(safe.count == 1 ? "1 problem can be fixed for you" : "\(safe.count) problems can be fixed for you")
+                                .font(.headline)
+                            Text("You'll see every change first. Your boot files are backed up before they change.")
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Button(safe.count == 1 ? "Fix 1 Problem" : "Fix \(safe.count) Problems") {
+                                activeFix = FixPlanner.combined(safe)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.large)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.blue.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    if facts.isOpenCore, facts.config == nil, facts.efiMountPoint == nil, let open = FixCatalog.fix(id: "mount-efi", facts: facts) {
+                        HStack(spacing: 12) {
+                            Text("Open your boot partition to check your OpenCore settings too.")
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer()
+                            Button("Check OpenCore Settings") { activeFix = open }
+                        }
+                        .padding(14)
+                        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+                    }
+                }
                 ForEach(attention) { finding in
                     FindingCard(finding: finding, showCategory: true, activeFix: $activeFix)
                 }
@@ -175,7 +205,11 @@ struct FindingCard: View {
                 if !fixes.isEmpty {
                     HStack {
                         ForEach(fixes) { fix in
-                            Button(buttonTitle(fix)) { activeFix = fix }
+                            if fix.id == fixes.first?.id, finding.status != .info, finding.status != .ok {
+                                Button(buttonTitle(fix)) { activeFix = fix }.buttonStyle(.borderedProminent)
+                            } else {
+                                Button(buttonTitle(fix)) { activeFix = fix }
+                            }
                         }
                     }
                     .padding(.top, 2)

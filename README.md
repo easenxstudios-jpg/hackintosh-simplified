@@ -10,6 +10,9 @@ A macOS app that checks a hackintosh and helps with common problems: Wi-Fi, Blue
 
 - **Scans without changing anything.** It needs no password, and it doesn't read your serial number.
 - **Applies fixes it can automate.** You see the changes first. Boot changes back up your whole EFI, and macOS's own dialog asks for your password.
+- **Fixes safe problems with one button.** Riskier changes stay separate, so you decide.
+- **Checks OpenCore settings.** The rules were worked out from OpenCore's documentation and source, and checked against 1.0.9. Newer versions may differ. If OpenCore Vault protects your boot files, the app won't edit them.
+- **Checks the NullMoth NVIDIA driver.** It reads the driver's health and sends you to its official 1401 app to install or update it. This project has no NullMoth code or files, and isn't affiliated with NullMoth.
 - **Guides you through the rest.** USB maps and Wi-Fi drivers depend on your exact machine, so those are step-by-step.
 - **Says when it has no fix.** It knows of no software fix for AirDrop on Realtek and Intel cards, for example.
 

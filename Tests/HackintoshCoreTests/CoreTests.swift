@@ -374,3 +374,240 @@ final class EFITests: XCTestCase {
         XCTAssertNil(try efi.apply(prepared, fixTitle: "x").backup)
     }
 }
+
+final class ConfigDoctorTests: XCTestCase {
+    private var folder: URL!
+    private var paths: EFIPaths!
+
+    override func setUpWithError() throws {
+        folder = FileManager.default.temporaryDirectory.appendingPathComponent("hs-doctor-\(UUID().uuidString)", isDirectory: true)
+        paths = EFIPaths(mountPoint: folder)
+        try FileManager.default.createDirectory(at: paths.kexts, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: folder)
+    }
+
+    private func kext(_ name: String, id: String? = nil, needs: [String] = [], program: String? = nil) throws {
+        let url = paths.kexts.appendingPathComponent("\(name).kext/Contents/MacOS")
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        let executable = program ?? name
+        try Data("x".utf8).write(to: url.appendingPathComponent(executable))
+        let info: [String: Any] = ["CFBundleIdentifier": id ?? "test.\(name)", "CFBundleExecutable": executable,
+                                   "OSBundleLibraries": Dictionary(uniqueKeysWithValues: needs.map { ($0, "1") })]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: paths.kexts.appendingPathComponent("\(name).kext/Contents/Info.plist"))
+    }
+
+    private func entry(_ name: String, enabled: Bool = true, executable: String? = nil, arch: String = "Any", max: String = "") -> [String: Any] {
+        ["Arch": arch, "BundlePath": "\(name).kext", "Enabled": enabled, "ExecutablePath": executable ?? "Contents/MacOS/\(name)",
+         "MinKernel": "", "MaxKernel": max, "PlistPath": "Contents/Info.plist", "Comment": ""]
+    }
+
+    private func config(_ kexts: [[String: Any]], delete: [String] = ["boot-args"], extra: (inout [String: Any]) -> Void = { _ in }) throws -> OpenCoreConfig {
+        var plist: [String: Any] = [
+            "Kernel": ["Add": kexts, "Quirks": [:]],
+            "ACPI": ["Add": []],
+            "UEFI": ["Drivers": [], "Quirks": [:], "ConnectDrivers": true],
+            "Booter": ["Quirks": [:]],
+            "Misc": ["Security": ["Vault": "Optional", "SecureBootModel": "Default", "DmgLoading": "Signed"], "Boot": ["PickerMode": "Builtin"]],
+            "NVRAM": ["Add": [OpenCoreConfig.bootArgsGUID: ["boot-args": "-v"]], "Delete": [OpenCoreConfig.bootArgsGUID: delete]],
+            "PlatformInfo": ["Generic": ["SystemSerialNumber": "SECRET-SERIAL"]],
+        ]
+        extra(&plist)
+        return try OpenCoreConfig(data: PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0))
+    }
+
+    private func ids(_ config: OpenCoreConfig, kernel: String = "25.7.0") -> [String] {
+        ConfigDoctor.check(config: config, paths: paths, kernel: kernel).map(\.id)
+    }
+
+    func testHealthyConfigHasNoFindings() throws {
+        try kext("Lilu"); try kext("AppleALC", needs: ["test.Lilu"])
+        XCTAssertEqual(ids(try config([entry("Lilu"), entry("AppleALC")])), [])
+    }
+
+    func testKnownOrderIsFoundAndFixed() throws {
+        try kext("Lilu"); try kext("WhateverGreen"); try kext("VirtualSMC"); try kext("SMCProcessor")
+        let c = try config([entry("SMCProcessor"), entry("VirtualSMC"), entry("WhateverGreen"), entry("Lilu")])
+        XCTAssertTrue(ids(c).contains("cfg-order"))
+        try c.apply(.reorderKexts(ConfigDoctor.orderProblems(c, paths: paths)))
+        XCTAssertEqual(ConfigDoctor.orderProblems(c, paths: paths), [])
+        let order = c.enabledKexts
+        XCTAssertLessThan(order.firstIndex(of: "Lilu.kext")!, order.firstIndex(of: "VirtualSMC.kext")!)
+        XCTAssertLessThan(order.firstIndex(of: "VirtualSMC.kext")!, order.firstIndex(of: "SMCProcessor.kext")!)
+    }
+
+    func testOrderFromAKextsOwnDependencies() throws {
+        try kext("Base", id: "x.base"); try kext("Plugin", needs: ["x.base"])
+        XCTAssertEqual(ConfigDoctor.orderProblems(try config([entry("Plugin"), entry("Base")]), paths: paths),
+                       [ConfigDoctor.OrderPair(child: "Plugin.kext", parent: "Base.kext")])
+    }
+
+    func testDependencyLoopIsRefused() throws {
+        let c = try config([entry("A"), entry("B")])
+        XCTAssertThrowsError(try c.apply(.reorderKexts([.init(child: "A.kext", parent: "B.kext"), .init(child: "B.kext", parent: "A.kext")])))
+    }
+
+    func testMissingFilesAndCodelessEntries() throws {
+        try kext("Real")
+        let c = try config([entry("Gone"), entry("Real", executable: "")])
+        let found = ids(c)
+        XCTAssertTrue(found.contains("cfg-kext-missing"))
+        XCTAssertTrue(found.contains("cfg-kext-nocode"))
+        let fixes = ConfigDoctor.missingExecutables(c, paths: paths)
+        XCTAssertEqual(fixes, [KextPathFix(bundle: "Real.kext", executable: "Contents/MacOS/Real")])
+    }
+
+    func testBootArgsWithoutDeleteIsFlaggedAndFixed() throws {
+        let c = try config([], delete: ["#boot-args"])
+        XCTAssertTrue(ids(c).contains("cfg-bootargs"))
+        XCTAssertEqual(try c.apply(.addNVRAMDelete(guid: OpenCoreConfig.bootArgsGUID.lowercased(), name: "boot-args")).count, 1)
+        XCTAssertFalse(ids(c).contains("cfg-bootargs"))
+    }
+
+    func testSecurityConflict() throws {
+        let c = try config([]) { p in p["Misc"] = ["Security": ["Vault": "Optional", "SecureBootModel": "j137", "DmgLoading": "Any"]] }
+        XCTAssertTrue(ids(c).contains("cfg-dmg"))
+        let off = try config([]) { p in p["Misc"] = ["Security": ["Vault": "Optional", "SecureBootModel": "Disabled", "DmgLoading": "Any"]] }
+        XCTAssertFalse(ids(off).contains("cfg-dmg"))
+    }
+
+    func testMissingVaultKeyBehavesLikeSecure() throws {
+        let c = try config([]) { p in p["Misc"] = ["Security": ["SecureBootModel": "Default"]] }
+        XCTAssertTrue(ids(c).contains("cfg-vault-missing"))
+    }
+
+    func testVaultedEFIIsNeverEdited() async throws {
+        try Data("x".utf8).write(to: paths.efi.appendingPathComponent("OC/vault.plist"))
+        try config([]).serialized().write(to: paths.config)
+        let efi = EFIManager(paths: paths, backupRoot: folder.appendingPathComponent("backups"), runner: LocalRunner())
+        do {
+            _ = try await efi.prepare(FixPlan(edits: [.addBootArg("-x")]))
+            XCTFail("must refuse")
+        } catch {
+            XCTAssertTrue(error.localizedDescription.contains("Vault"))
+        }
+    }
+
+    func testDarwinVersionLimits() {
+        XCTAssertEqual(ConfigDoctor.darwinVersion("25.7.0"), 250700)
+        XCTAssertEqual(ConfigDoctor.darwinVersion("24"), 240000)
+        XCTAssertEqual(ConfigDoctor.darwinVersion("x"), 0)
+        XCTAssertEqual(ConfigDoctor.darwinVersion(""), 0)
+        XCTAssertFalse(ConfigDoctor.loads(on: 240600, min: "", max: "24"), "24 means 24.0.0 or older")
+        XCTAssertTrue(ConfigDoctor.loads(on: 250700, min: "bad", max: ""), "unreadable limits are no limit")
+    }
+
+    func testDuplicatesTurnedOff() throws {
+        try kext("A")
+        let c = try config([entry("A"), entry("A")])
+        XCTAssertTrue(ids(c).contains("cfg-dup"))
+        XCTAssertEqual(try c.apply(.turnOffDuplicateKexts).count, 1)
+        XCTAssertEqual(c.enabledKexts, ["A.kext"])
+    }
+
+    func testFindingsNeverContainSerial() throws {
+        let c = try config([entry("Gone")])
+        let text = ConfigDoctor.check(config: c, paths: paths, kernel: "25.7.0").map { $0.title + $0.detail }.joined()
+        XCTAssertFalse(text.contains("SECRET-SERIAL"))
+    }
+}
+
+final class NullMothDoctorTests: XCTestCase {
+    private func facts(args: String = "nvfb=1 nvaccel=1 nvfbheads=4 -nvkmsnosmooth amfi_get_out_of_my_way=0x1 amfi=0x80 ipc_control_port_options=0", loaded: Bool = true) -> SystemFacts {
+        var f = SystemFacts()
+        f.osVersion = "26.7.2"
+        f.pci = [PCIDevice(name: "GFX0", vendor: 0x10de, device: 0x2d59, classCode: 0x0300)]
+        f.bootArgs = args
+        if loaded { f.kexts = ["com.nullmoth.NVRM": "2.6.6"] }
+        return f
+    }
+
+    private func ids(_ f: SystemFacts) -> [String] { NullMothDoctor.check(f).map(\.id) }
+
+    func testAllowListFollowsFirstMatch() {
+        let stock = "# note\n*\n!WindowServer\n"
+        XCTAssertEqual(NullMothDoctor.access(for: "WindowServer", allowList: stock), .allowed, "* comes first, so !WindowServer is never reached")
+        XCTAssertEqual(NullMothDoctor.access(for: "A", allowList: "-A\n*\n"), .denied)
+        XCTAssertEqual(NullMothDoctor.access(for: "A", allowList: "*\n-A\n"), .allowed, "a deny after * never fires")
+        XCTAssertEqual(NullMothDoctor.access(for: "A", allowList: "!A\n"), .onlyWhenReady)
+        XCTAssertEqual(NullMothDoctor.access(for: "A", allowList: "B\n"), .denied, "no match means no access")
+        XCTAssertEqual(NullMothDoctor.access(for: "A", allowList: "  A\r\n"), .allowed)
+        XCTAssertEqual(NullMothDoctor.access(for: "A", allowList: "-*\nA\n"), .allowed, "-* is not a wildcard")
+    }
+
+    func testHealthyDriverOnlyShowsOkAndHelp() {
+        var f = facts()
+        f.nullMoth.allowList = "*\n"
+        f.nullMoth.allowListMode = 0o644
+        XCTAssertEqual(Set(ids(f)), ["nv-ok", "nv-flicker", "nv-icons"])
+    }
+
+    func testNotInstalledPointsToOfficialInstaller() {
+        let finding = NullMothDoctor.check(facts(args: "", loaded: false)).first { $0.id == "nv-none" }
+        XCTAssertEqual(finding?.fixIDs, ["nv-get-driver"])
+    }
+
+    func testOldCardAndNonNvidia() {
+        var f = facts()
+        f.pci[0].device = 0x1b80
+        XCTAssertEqual(ids(f), ["nv-old"])
+        f.pci = [PCIDevice(name: "GFX0", vendor: 0x1002, device: 1, classCode: 0x0300)]
+        XCTAssertEqual(ids(f), [])
+    }
+
+    func testWhateverGreenNeedsGfxrst() {
+        var f = facts()
+        f.kexts["as.vit9696.WhateverGreen"] = "1.7"
+        XCTAssertTrue(ids(f).contains("nv-args"))
+        f.bootArgs += " gfxrst=4"
+        XCTAssertFalse(ids(f).contains("nv-args"))
+    }
+
+    func testConflictsAndSleep() {
+        XCTAssertTrue(ids(facts(args: "-wegnoegpu", loaded: false)).contains("nv-conflict"))
+        XCTAssertFalse(ids(facts(args: "-wegnoegpu", loaded: false)).contains("nv-none"))
+        XCTAssertTrue(ids(facts(args: "-nvrmnopm nvfb=1", loaded: true)).contains("nv-nopm"))
+    }
+
+    func testBlockedWindowServerIsAProblemButFileIsNeverEdited() {
+        var f = facts()
+        f.nullMoth.allowList = "-WindowServer\n*\n"
+        XCTAssertTrue(ids(f).contains("nv-allow-denied"))
+        for fix in NullMothDoctor.fixes(facts: f) {
+            guard case .automatic(let build) = fix.kind else { continue }
+            let commands = (try? build(nil))?.commands ?? []
+            XCTAssertFalse(commands.joined().contains("nvmtl"), fix.id)
+        }
+    }
+
+    func testVersionHelpers() {
+        XCTAssertTrue(NullMothDoctor.isNewer("2.7", than: "2.6.6"))
+        XCTAssertFalse(NullMothDoctor.isNewer("2.6.6", than: "2.6.6"))
+        XCTAssertFalse(NullMothDoctor.isNewer("2.6", than: "2.6.6"))
+        XCTAssertEqual(NullMothDoctor.parseLatest("{\"tag_name\":\"v2.6.6\"}"), "2.6.6")
+        XCTAssertNil(NullMothDoctor.parseLatest("offline"))
+        XCTAssertEqual(NullMothDoctor.parseCount("%02"), 2)
+        XCTAssertEqual(NullMothDoctor.parseCount("1"), 1)
+        XCTAssertEqual(NullMothDoctor.parsePowerState("x\n  \"nvrm-pm\" = \"running\"\n"), "running")
+    }
+
+    func testFixAllOnlyTakesSafeAutomaticFixes() throws {
+        var f = facts()
+        f.hibernateMode = 3
+        f.hasBattery = true
+        f.bootArgs += " -nvrmnopm"
+        f.efiDevice = "disk0s1"
+        let findings = Checks.run(f)
+        let safe = FixPlanner.safeFixes(findings: findings, facts: f)
+        let chosen = Set(safe.map(\.id))
+        XCTAssertTrue(chosen.contains("hibernate-off"))
+        XCTAssertFalse(chosen.contains("nv-allow-sleep"), "medium risk stays a separate choice")
+        XCTAssertFalse(chosen.contains("mount-efi"))
+        XCTAssertTrue(safe.allSatisfy { $0.risk == .low && $0.parameter == nil })
+        guard case .automatic(let build) = FixPlanner.combined(safe).kind else { return XCTFail("not automatic") }
+        XCTAssertTrue(try build(nil).commands.contains { $0.contains("hibernatemode") })
+    }
+}

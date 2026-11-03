@@ -68,6 +68,10 @@ public final class EFIManager: @unchecked Sendable {
             return PreparedFix(plan: plan, kexts: [], changes: plan.commands.map { "Run: \($0)" }, newConfig: nil, originalConfig: nil)
         }
         guard let paths else { throw FixError("The boot partition isn't open. Open it from Boot Setup first.") }
+        // OpenCore checks every file against vault.plist, so editing any of them would stop the Mac starting.
+        if FileManager.default.fileExists(atPath: paths.efi.appendingPathComponent("OC/vault.plist").path) {
+            throw FixError("OpenCore Vault is protecting your boot files, and changing them would stop your Mac starting, so nothing was changed. Follow OpenCore's Vault steps to allow changes.")
+        }
 
         let original = try Data(contentsOf: paths.config)
         let config = try OpenCoreConfig(data: original)

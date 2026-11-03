@@ -11,6 +11,7 @@ public enum SystemScanner {
         facts.osBuild = output("/usr/bin/sw_vers", ["-buildVersion"])
         facts.model = output("/usr/sbin/sysctl", ["-n", "hw.model"])
         facts.cpu = output("/usr/sbin/sysctl", ["-n", "machdep.cpu.brand_string"])
+        facts.kernelVersion = output("/usr/sbin/sysctl", ["-n", "kern.osrelease"])
         facts.openCoreVersion = nvram("\(openCoreGUID):opencore-version")
         facts.bootArgs = nvram("boot-args") ?? ""
         facts.sipEnabled = parseSIP(output("/usr/bin/csrutil", ["status"]))
@@ -35,6 +36,7 @@ public enum SystemScanner {
         applyProfiler(json, to: &facts)
 
         locateEFI(&facts)
+        if NullMothDoctor.hasCard(facts) { facts.nullMoth = NullMothDoctor.scan() }
         return facts
     }
 
