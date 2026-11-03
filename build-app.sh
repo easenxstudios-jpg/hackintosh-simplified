@@ -23,9 +23,8 @@ for rpath in $(otool -l "$APP/Contents/MacOS/HackintoshSimplified" | awk '$1 == 
 done
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 
-xcrun swift "$ROOT/Resources/make-icon.swift" "$ROOT/build/AppIcon.iconset"
-iconutil -c icns "$ROOT/build/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
-rm -rf "$ROOT/build/AppIcon.iconset"
+# Compiles the Icon Composer file: Liquid Glass on macOS 26, and a flat icon on older versions.
+xcrun actool "$ROOT/Resources/AppIcon.icon" --compile "$APP/Contents/Resources" --platform macosx --minimum-deployment-target 13.0 --app-icon AppIcon --output-partial-info-plist "$(mktemp)" --output-format human-readable-text > /dev/null
 
 # The patched Realtek Bluetooth kexts, only offered on the exact build and chip they match.
 if [ "${BUNDLE_PATCHED_KEXTS:-1}" = 1 ]; then
