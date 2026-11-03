@@ -611,3 +611,22 @@ final class NullMothDoctorTests: XCTestCase {
         XCTAssertTrue(try build(nil).commands.contains { $0.contains("hibernatemode") })
     }
 }
+
+final class ProblemGuideTests: XCTestCase {
+    func testSearchFindsRealWordsFromScreens() {
+        XCTAssertFalse(ProblemGuide.search("Waiting for Root Device").isEmpty)
+        XCTAssertFalse(ProblemGuide.search("EXITBS").isEmpty)
+        XCTAssertFalse(ProblemGuide.search("no sound tahoe").isEmpty)
+        XCTAssertTrue(ProblemGuide.search("zzzz-not-a-problem").isEmpty)
+        XCTAssertEqual(ProblemGuide.search("").count, ProblemGuide.entries.count)
+    }
+
+    func testEntriesAreComplete() {
+        XCTAssertEqual(Set(ProblemGuide.entries.map(\.id)).count, ProblemGuide.entries.count, "ids must be unique")
+        for entry in ProblemGuide.entries {
+            XCTAssertFalse(entry.steps.isEmpty, entry.problem)
+            XCTAssertFalse(entry.cause.isEmpty, entry.problem)
+            XCTAssertTrue(entry.link.hasPrefix("https://"), entry.problem)
+        }
+    }
+}

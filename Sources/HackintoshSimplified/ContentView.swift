@@ -3,6 +3,7 @@ import SwiftUI
 
 enum SidebarItem: Hashable {
     case overview
+    case guide
     case category(Area)
     case backups
 }
@@ -16,6 +17,7 @@ struct ContentView: View {
         NavigationSplitView {
             List(selection: $selection) {
                 Label("Overview", systemImage: "checklist").tag(SidebarItem.overview)
+                Label("Problem Guide", systemImage: "questionmark.circle").tag(SidebarItem.guide)
                 Section("Your Mac") {
                     ForEach(Area.allCases) { category in
                         if model.worstStatus(in: category) != nil {
@@ -44,6 +46,7 @@ struct ContentView: View {
                 } else {
                     switch selection ?? .overview {
                     case .overview: OverviewView(activeFix: $activeFix)
+                    case .guide: GuideView()
                     case .category(let category): FindingList(title: category.rawValue, findings: model.findings.filter { $0.category == category }, activeFix: $activeFix)
                     case .backups: BackupsView()
                     }
@@ -288,5 +291,68 @@ struct BackupsView: View {
                 message = error.localizedDescription
             }
         }
+    }
+}
+
+struct GuideView: View {
+    @State private var text = ""
+
+    var body: some View {
+        let results = ProblemGuide.search(text)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Search for what you're seeing, or paste the last line from the startup text.")
+                    .foregroundStyle(.secondary)
+                TextField("For example: no sound, Waiting for Root Device, won't wake", text: $text)
+                    .textFieldStyle(.roundedBorder)
+                if results.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Nothing matches that yet.").font(.headline)
+                        Text("Try fewer words. For anything else, Dortania's troubleshooting guide covers many more errors.").foregroundStyle(.secondary)
+                        Link("Open Dortania's troubleshooting guide", destination: URL(string: "https://dortania.github.io/OpenCore-Install-Guide/troubleshooting/troubleshooting.html")!)
+                    }
+                }
+                ForEach(ProblemGuide.topics, id: \.self) { topic in
+                    let items = results.filter { $0.topic == topic }
+                    if !items.isEmpty {
+                        Text(topic).font(.title3.weight(.semibold)).padding(.top, 6)
+                        ForEach(items) { GuideCard(entry: $0, expanded: !text.isEmpty) }
+                    }
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .navigationTitle("Problem Guide")
+    }
+}
+
+struct GuideCard: View {
+    let entry: GuideEntry
+    let expanded: Bool
+    @State private var open = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: Binding(get: { open || expanded }, set: { open = $0 })) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(entry.cause).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                ForEach(Array(entry.steps.enumerated()), id: \.offset) { index, step in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("\(index + 1).").monospacedDigit()
+                        Text(step).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
+                    }
+                }
+                if let url = URL(string: entry.link) {
+                    Link("Read more", destination: url)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 6)
+        } label: {
+            Text(entry.problem).font(.headline).fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
     }
 }

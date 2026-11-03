@@ -14,9 +14,24 @@ A macOS app that checks a hackintosh and helps with common problems: Wi-Fi, Blue
 - **Checks OpenCore settings.** The rules were worked out from OpenCore's documentation and source, and checked against 1.0.9. Newer versions may differ. If OpenCore Vault protects your boot files, the app won't edit them.
 - **Checks the NullMoth NVIDIA driver.** It reads the driver's health and sends you to its official 1401 app to install or update it. This project has no NullMoth code or files, and isn't affiliated with NullMoth.
 - **Guides you through the rest.** USB maps and Wi-Fi drivers depend on your exact machine, so those are step-by-step.
+- **Has a searchable Problem Guide.** It covers common problems in plain words, from startup errors to sleep, each with a link to its source. It can't cover every possible problem.
 - **Says when it has no fix.** It knows of no software fix for AirDrop on Realtek and Intel cards, for example.
 
 It never restarts your Mac, changes SIP, or generates serial numbers.
+
+## Windows setup wizard
+
+`HackintoshSimplifiedSetup.exe` helps you start from a Windows PC. It checks your hardware, walks you through Windows and BIOS settings, and prepares a macOS USB drive. It lists only USB drives, and you have to type ERASE before it erases one.
+
+It puts OpenCore and drivers on the USB, checks the settings with OpenCore's validator, and checks macOS recovery against Apple's signature.
+
+- **PCs it generates a setup for:** Intel Coffee Lake and Comet Lake desktops only. For others, it explains why and points to [OpCore Simplify](https://github.com/lzhoang2801/OpCore-Simplify).
+- **First boot:** OpenCore loads the USB's drivers at startup, so the processor, Intel graphics support, audio, USB and Ethernet can work from the first boot. It can't promise speed. NVIDIA and Wi-Fi drivers have to wait until macOS is installed.
+- **Not tested yet:** a real USB stick, or starting macOS on a real PC with what it builds. On a Windows test machine, the scan, validator, Apple signature check and erase code all ran on a temporary virtual disk.
+- **Serial numbers:** it uses OpenCore's placeholders, so iCloud and iMessage may not work until you set up your own.
+- **Windows warning:** the exe isn't code signed, so SmartScreen may warn you. Choose **More info**, then **Run anyway**, only if you trust this project.
+
+To build it, install Go, then run `go build -o HackintoshSimplifiedSetup.exe .` in `windows/` with `GOOS=windows`.
 
 ## Before you apply a fix
 
