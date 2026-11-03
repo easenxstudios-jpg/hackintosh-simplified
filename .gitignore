@@ -1,0 +1,8 @@
+build/
+.build/
+.swiftpm/
+*.kext/
+*.pklg
+config.plist
+Backups/
+.DS_Store

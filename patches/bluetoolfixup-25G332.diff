@@ -1,0 +1,36 @@
+diff --git a/BrcmPatchRAM/BlueToolFixup.cpp b/BrcmPatchRAM/BlueToolFixup.cpp
+index e592e66..edd81c7 100644
+--- a/BrcmPatchRAM/BlueToolFixup.cpp
++++ b/BrcmPatchRAM/BlueToolFixup.cpp
+@@ -161,6 +161,19 @@ static const uint8_t kBadChipsetCheckPatched15_4[] =
+     0x90, 0x90
+ };
+ 
++// Realtek USB controllers on macOS 26.7.2 (25G332). See thegwchr/RealtekBluetoothFirmware issue 6.
++// The chip does not support Set Event Mask Page 2, so continue as if the command succeeded.
++static const uint8_t kEventMaskPage2Original25G332[] = {0x48, 0x8B, 0x3D, 0x59, 0x6A, 0x9B, 0x00, 0x89, 0xDE, 0xE8};
++static const uint8_t kEventMaskPage2Patched25G332[]  = {0x31, 0xFF, 0xE8, 0x62, 0x19, 0x00, 0x00, 0xEB, 0x05, 0xE8};
++
++// Treat the LE scan reset error (location 3) as success.
++static const uint8_t kScanResetOriginal25G332[] = {0xE9, 0xB6, 0xFE, 0xFF, 0xFF, 0x85, 0xFF, 0x74, 0x0A, 0xBE, 0x03, 0x00};
++static const uint8_t kScanResetPatched25G332[]  = {0xE9, 0xB6, 0xFE, 0xFF, 0xFF, 0x31, 0xFF, 0x74, 0x0A, 0xBE, 0x03, 0x00};
++
++// Treat a scan stopped error as success, so bluetoothd doesn't restart with reason 718.
++static const uint8_t kScanStoppedOriginal25G332[] = {0x41, 0x89, 0xF6, 0x49, 0x89, 0xFC, 0x85, 0xF6, 0x0F, 0x84, 0xD5, 0x00, 0x00, 0x00};
++static const uint8_t kScanStoppedPatched25G332[]  = {0x41, 0x89, 0xF6, 0x49, 0x89, 0xFC, 0x31, 0xF6, 0x0F, 0x84, 0xD5, 0x00, 0x00, 0x00};
++
+ static bool shouldPatchBoardId = false;
+ static bool shouldPatchAddress = false;
+ static bool shouldPatchNvramCheck = false;
+@@ -230,6 +243,11 @@ static void patched_cs_validate_page(vnode_t vp, memory_object_t pager, memory_o
+                 searchAndPatch(data, PAGE_SIZE, path, kBadChipsetCheckOriginal13_3, kBadChipsetCheckPatched13_3);
+             if (getKernelVersion() >= KernelVersion::Sequoia)
+                 searchAndPatch(data, PAGE_SIZE, path, kBadChipsetCheckOriginal15_4, kBadChipsetCheckPatched15_4);
++            if (getKernelVersion() == KernelVersion::Tahoe) {
++                searchAndPatch(data, PAGE_SIZE, path, kEventMaskPage2Original25G332, kEventMaskPage2Patched25G332);
++                searchAndPatch(data, PAGE_SIZE, path, kScanResetOriginal25G332, kScanResetPatched25G332);
++                searchAndPatch(data, PAGE_SIZE, path, kScanStoppedOriginal25G332, kScanStoppedPatched25G332);
++            }
+             if (shouldPatchNvramCheck)
+                 searchAndPatchWithMask(data, PAGE_SIZE, path, kSkipInternalControllerNVRAMCheck13_3, sizeof(kSkipInternalControllerNVRAMCheck13_3), kSkipInternalControllerNVRAMCheckMask13_3, sizeof(kSkipInternalControllerNVRAMCheckMask13_3), kSkipInternalControllerNVRAMCheckPatched13_3, sizeof(kSkipInternalControllerNVRAMCheckPatched13_3), nullptr, 0);
+             if (shouldPatchBoardId)
