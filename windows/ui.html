@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hackintosh Simplified Setup</title>
+<link rel="icon" href="/icon.png">
+<style>
+/* Layout: a fixed step rail beside one focused task, like a native setup assistant. */
+:root { color-scheme: dark; --bg:#07090f; --panel:rgba(255,255,255,.055); --rim:rgba(255,255,255,.13); --fg:#f5f5f7; --muted:#a4a7b3; --blue:#2997ff; --mint:#5cf2b4; --amber:#ffc56b; --red:#ff7b86; --sans:-apple-system,"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif; }
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; display:grid; grid-template-columns:260px minmax(0,1fr); background:radial-gradient(70vw 60vh at 85% 0%, rgba(92,50,240,.28), transparent 70%), radial-gradient(60vw 60vh at 40% 110%, rgba(30,150,255,.18), transparent 70%), var(--bg); color:var(--fg); font:15px/1.5 var(--sans); }
+aside { padding:24px 14px; border-right:1px solid var(--rim); background:rgba(0,0,0,.28); position:sticky; top:0; height:100vh; overflow:auto; }
+.brand { display:flex; gap:10px; align-items:center; font-weight:600; padding:0 8px 18px; }
+.brand img { width:32px; height:32px; }
+.steps { list-style:none; margin:0; padding:0; display:grid; gap:3px; }
+.steps button { width:100%; display:flex; gap:10px; align-items:center; text-align:left; padding:9px 10px; border:0; border-radius:10px; background:none; color:var(--muted); font:inherit; cursor:pointer; }
+.steps button:hover { background:var(--panel); color:var(--fg); }
+.steps button.on { background:rgba(41,151,255,.22); color:#fff; }
+.num { flex:none; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-size:12px; border:1px solid var(--rim); }
+.on .num { background:var(--blue); border-color:var(--blue); color:#001; font-weight:700; }
+main { padding:36px clamp(20px,5vw,64px) 80px; min-width:0; }
+section { max-width:760px; display:grid; gap:18px; }
+h1 { margin:0; font-size:clamp(26px,3.6vw,38px); line-height:1.1; letter-spacing:-.02em; text-wrap:balance; }
+h2 { margin:8px 0 0; font-size:18px; }
+p { margin:0; color:var(--muted); max-width:66ch; }
+.card { background:var(--panel); border:1px solid var(--rim); border-radius:14px; padding:16px 18px; display:grid; gap:10px; min-width:0; }
+.warn { border-color:rgba(255,197,107,.5); background:rgba(255,197,107,.07); }
+.bad { border-color:rgba(255,123,134,.55); background:rgba(255,123,134,.08); }
+.warn p, .bad p { color:var(--fg); }
+.row { display:grid; grid-template-columns:18px minmax(0,1fr); gap:10px; padding:7px 0; border-top:1px solid rgba(255,255,255,.07); }
+.row:first-child { border-top:0; }
+.dot { width:10px; height:10px; margin-top:6px; border-radius:50%; background:var(--muted); }
+.good .dot { background:var(--mint); } .warnr .dot { background:var(--amber); } .badr .dot { background:var(--red); }
+.row b { display:block; font-weight:600; overflow-wrap:anywhere; }
+.row span { color:var(--muted); }
+.check { display:grid; grid-template-columns:20px minmax(0,1fr); gap:10px; padding:7px 0; cursor:pointer; }
+.check input { margin:4px 0 0; width:16px; height:16px; accent-color:var(--blue); }
+button.action { justify-self:start; padding:10px 20px; border:0; border-radius:980px; background:var(--blue); color:#001; font:600 15px var(--sans); cursor:pointer; }
+button.action:disabled { opacity:.4; cursor:default; }
+button.second { background:rgba(255,255,255,.1); color:var(--fg); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid var(--blue); outline-offset:2px; }
+.nav { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+select, input[type=text] { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--rim); background:rgba(0,0,0,.35); color:var(--fg); font:inherit; }
+label { display:grid; gap:6px; font-weight:600; }
+.bar { height:8px; border-radius:8px; background:rgba(255,255,255,.1); overflow:hidden; }
+.bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--blue),var(--mint)); transition:width .3s; }
+code { font:13px ui-monospace,Consolas,monospace; background:rgba(255,255,255,.08); padding:1px 5px; border-radius:5px; overflow-wrap:anywhere; }
+a { color:var(--blue); }
+.tag { display:inline-block; padding:1px 8px; border-radius:980px; background:rgba(255,197,107,.18); color:var(--amber); font-size:12px; }
+[hidden] { display:none !important; }
+@media (max-width:720px) { body { grid-template-columns:minmax(0,1fr); } aside { position:static; height:auto; border-right:0; border-bottom:1px solid var(--rim); } }
+@media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><img src="/icon.png" alt="">Hackintosh Simplified</div>
+  <ul class="steps" id="rail"></ul>
+</aside>
+<main>
+  <section data-step="Welcome">
+    <h1>Set up macOS on this PC</h1>
+    <p>This wizard checks your PC, walks you through Windows and BIOS settings, and prepares a macOS USB drive.</p>
+    <div class="card warn"><p><strong>Early preview. Use it at your own risk.</strong> The setup this wizard creates hasn't been boot-tested on real PCs yet, so it may need fixes. Changing BIOS settings or installing macOS can lose data if something goes wrong.</p></div>
+    <div class="card"><h2>What you'll need</h2><p>An empty USB drive of at least 16 GB, a wired or Wi-Fi connection, about an hour, and a separate drive or a backup of your files.</p></div>
+    <div class="card"><p>Installing macOS on non-Apple hardware may break Apple's software license, so check what applies to you. This project isn't affiliated with Apple or OpenCore.</p></div>
+    <div class="nav"><button class="action" data-next>Check My PC</button></div>
+  </section>
+
+  <section data-step="Check this PC" hidden>
+    <h1>Will it work on this PC?</h1>
+    <p id="scanStatus">Checking your hardware…</p>
+    <div class="card bad" id="verdictBad" hidden><p id="verdictText"></p><p>You can still use the guides here. <a href="https://github.com/lzhoang2801/OpCore-Simplify" target="_blank" rel="noreferrer">OpCore Simplify</a> is a separate tool that generates setups for more PCs.</p></div>
+    <div class="card" id="verdictGood" hidden><p id="goodText"></p></div>
+    <div class="card" id="parts" hidden></div>
+    <div class="nav"><button class="action second" id="rescan">Check Again</button><button class="action" data-next>Next</button></div>
+  </section>
+
+  <section data-step="Prepare Windows" hidden>
+    <h1>Prepare Windows</h1>
+    <p>Do these first, so Windows and your files stay safe.</p>
+    <div class="card" id="winStatus" hidden></div>
+    <div class="card">
+      <label class="check"><input type="checkbox"><span><b>Back up your important files.</b> Installing a new system can erase a drive if the wrong one is chosen.</span></label>
+      <label class="check"><input type="checkbox"><span><b>Save your BitLocker recovery key</b>, if BitLocker is on. Changing BIOS settings can make Windows ask for it. Find it at aka.ms/myrecoverykey.</span></label>
+      <label class="check"><input type="checkbox"><span><b>Turn off Fast Startup.</b> Go to Control Panel &gt; Power Options &gt; Choose what the power buttons do, then clear “Turn on fast startup”.</span></label>
+      <label class="check"><input type="checkbox"><span><b>Choose where macOS will go.</b> A separate SSD is safest. To share a drive, shrink a Windows partition in Disk Management and leave at least 100 GB free.</span></label>
+      <label class="check"><input type="checkbox"><span><b>Connect to Ethernet if you can.</b> macOS downloads the rest of itself while installing, and Wi-Fi usually won't work yet.</span></label>
+    </div>
+    <div class="nav"><button class="action" data-next>Next</button></div>
+  </section>
+
+  <section data-step="Set up the BIOS" hidden>
+    <h1>Set up the BIOS</h1>
+    <p>Do this when the USB is ready, because you'll restart. Press Del, F2 or F10 at startup to open the BIOS. Names vary by maker, and some settings may not exist on your PC, which is fine.</p>
+    <div class="card warn"><p>Don't change anything you're unsure about. Don't update the BIOS or change CPU voltage for this. If BitLocker is on, have your recovery key ready.</p></div>
+    <div class="card"><h2>Turn off</h2>
+      <label class="check"><input type="checkbox"><span><b>Secure Boot</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>Fast Boot</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>CSM</b> (Compatibility Support Module)</span></label>
+      <label class="check"><input type="checkbox"><span><b>Intel VMD</b>, also called RST or Volume Management Device. Windows may stop starting if it was installed with this on, so check first and keep your backup ready.</span></label>
+      <label class="check"><input type="checkbox"><span><b>VT-d</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>CFG Lock</b>, if your BIOS shows it</span></label>
+      <label class="check"><input type="checkbox"><span><b>Intel SGX</b> and <b>Platform Trust (PTT)</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>Serial/COM port</b> and <b>Parallel port</b></span></label>
+    </div>
+    <div class="card"><h2>Turn on</h2>
+      <label class="check"><input type="checkbox"><span><b>VT-x</b> (Virtualization)</span></label>
+      <label class="check"><input type="checkbox"><span><b>Above 4G Decoding</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>Hyper-Threading</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>XHCI Hand-off</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>SATA mode: AHCI</b></span></label>
+      <label class="check"><input type="checkbox"><span><b>DVMT Pre-Allocated: 64 MB</b>, if you use Intel graphics</span></label>
+      <label class="check"><input type="checkbox"><span><b>OS Type: Other OS</b>, if your BIOS has it</span></label>
+    </div>
+    <p>These follow the <a href="https://dortania.github.io/OpenCore-Install-Guide/config.plist/comet-lake.html" target="_blank" rel="noreferrer">Dortania OpenCore guide</a>.</p>
+    <div class="nav"><button class="action" data-next>Next</button></div>
+  </section>
+
+  <section data-step="Make the USB" hidden>
+    <h1>Make the macOS USB</h1>
+    <p>This erases the drive you choose, then adds OpenCore, your PC's drivers and macOS recovery from Apple.</p>
+    <div class="card bad" id="usbBlocked" hidden><p>This wizard can't generate a setup for this PC. See “Check this PC”.</p></div>
+    <div class="card" id="usbForm">
+      <h2>What goes on the USB</h2>
+      <div id="kextList"></div>
+      <label for="macos">macOS version<select id="macos"></select></label>
+      <label for="disk">USB drive<select id="disk"></select></label>
+      <button class="action second" id="refreshUsb">Refresh Drives</button>
+      <p id="usbNone" hidden>No USB drive found. Connect one, then refresh. Only USB drives appear here, never the disk Windows runs from.</p>
+      <label for="confirm">Everything on this drive will be erased. Type ERASE to continue.<input id="confirm" type="text" autocomplete="off" spellcheck="false"></label>
+      <button class="action" id="build" disabled>Erase and Make USB</button>
+    </div>
+    <div class="card" id="progress" hidden><b id="stepText"></b><div class="bar"><i id="barFill"></i></div><p>The macOS download can take a while. Keep this PC awake.</p></div>
+    <div class="card bad" id="buildError" hidden><p id="buildErrorText"></p></div>
+    <div class="card" id="buildDone" hidden><h2>Your USB is ready</h2><p id="doneText"></p></div>
+    <div class="nav"><button class="action" data-next>Next</button></div>
+  </section>
+
+  <section data-step="Install macOS" hidden>
+    <h1>Install macOS</h1>
+    <div class="card"><h2>Drivers load before macOS starts</h2><p>OpenCore loads the drivers on your USB while the text scrolls by at startup, so macOS can see your hardware from the first boot. That covers processor, graphics support, audio, USB and Ethernet.</p></div>
+    <div class="card warn" id="laterCard"><h2>What can't be ready at first boot</h2><div id="laterList"></div></div>
+    <div class="card"><h2>Steps</h2><ol style="margin:0;padding-left:1.2em;display:grid;gap:8px;color:var(--muted)">
+      <li>Restart, open your BIOS, and make the settings from the BIOS step.</li>
+      <li>Open the boot menu (often F8, F11 or F12) and choose the USB's UEFI entry.</li>
+      <li>In the OpenCore menu, choose the macOS installer, sometimes named “macOS Base System” or “dmg”.</li>
+      <li>Wait while text scrolls. The first start can take several minutes.</li>
+      <li>Open Disk Utility, choose View &gt; Show All Devices, and erase only the drive for macOS as APFS with GUID Partition Map. Check the name and size carefully.</li>
+      <li>Choose Reinstall macOS. The PC restarts several times. Choose the macOS drive in the OpenCore menu each time.</li>
+    </ol></div>
+    <div class="card"><h2>Make it fast and finish up</h2><ol style="margin:0;padding-left:1.2em;display:grid;gap:8px;color:var(--muted)">
+      <li>Install to an SSD, never to a USB 2 drive or adapter.</li>
+      <li>Open <a href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases" target="_blank" rel="noreferrer">Hackintosh Simplified for Mac</a> and press Fix Problems.</li>
+      <li>For NVIDIA cards, use NullMoth's <a href="https://github.com/nullmoth/nvidia-macos-driver/releases/latest" target="_blank" rel="noreferrer">1401 app</a> from its official page.</li>
+      <li>Build a USB map, so ports reach full speed.</li>
+    </ol></div>
+    <div class="card"><h2>If it gets stuck</h2><p>Take a photo of the last lines on screen, and search them in <a href="https://dortania.github.io/OpenCore-Install-Guide/troubleshooting/troubleshooting.html" target="_blank" rel="noreferrer">Dortania's troubleshooting guide</a>.</p></div>
+  </section>
+</main>
+<script>
+const token = "__TOKEN__";
+const api = async (path, options = {}) => {
+  const response = await fetch(path, { ...options, headers: { "X-Setup-Token": token, "Content-Type": "application/json" } });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Something went wrong.");
+  return data;
+};
+const $ = id => document.getElementById(id);
+const sections = [...document.querySelectorAll("section")];
+const rail = $("rail");
+const esc = text => { const d = document.createElement("div"); d.textContent = text ?? ""; return d.innerHTML; };
+function show(index) {
+  sections.forEach((s, i) => s.hidden = i !== index);
+  [...rail.querySelectorAll("button")].forEach((b, i) => b.classList.toggle("on", i === index));
+  window.scrollTo(0, 0);
+  if (sections[index].dataset.step === "Make the USB") refreshUSB();
+}
+sections.forEach((s, i) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<button><span class="num">${i + 1}</span>${esc(s.dataset.step)}</button>`;
+  li.firstChild.onclick = () => show(i);
+  rail.append(li);
+  s.querySelectorAll("[data-next]").forEach(b => b.onclick = () => show(i + 1));
+});
+show(0);
+
+const rows = list => list.map(p => `<div class="row ${p.status === "good" ? "good" : p.status === "bad" ? "badr" : "warnr"}"><i class="dot"></i><div><b>${esc(p.name)}</b><span>${esc(p.note)}</span></div></div>`).join("");
+let plan = null;
+async function scan() {
+  $("scanStatus").textContent = "Checking your hardware…";
+  const macos = $("macos").value || "";
+  try {
+    const data = await api("/api/scan?macos=" + encodeURIComponent(macos));
+    plan = data.plan;
+    const hw = data.hardware;
+    $("scanStatus").textContent = hw.demo ? "Demo mode: this isn't a real PC scan." : `${hw.maker} ${hw.board}, ${hw.windows}`;
+    $("verdictBad").hidden = plan.supported;
+    $("verdictGood").hidden = !plan.supported;
+    $("verdictText").textContent = plan.reason;
+    $("goodText").textContent = `This wizard can prepare a USB for your ${plan.platform}, set up as ${plan.smbios}. Parts marked in amber may need more work later.`;
+    $("parts").hidden = false;
+    $("parts").innerHTML = rows(plan.parts);
+    const win = [];
+    if (hw.bitLocker === "On" || hw.bitLocker === "1") win.push({ name: "BitLocker is on", status: "warn", note: "Save your recovery key before changing BIOS settings." });
+    if (hw.fastStartup) win.push({ name: "Fast Startup is on", status: "warn", note: "Turn it off before continuing." });
+    if (hw.secureBoot) win.push({ name: "Secure Boot is on", status: "warn", note: "Turn it off in the BIOS." });
+    if (hw.freeGB < 100) win.push({ name: "Your Windows drive has " + hw.freeGB + " GB free", status: "warn", note: "A separate drive for macOS is the better choice." });
+    $("winStatus").hidden = !win.length;
+    $("winStatus").innerHTML = rows(win);
+    $("usbBlocked").hidden = plan.supported;
+    $("usbForm").hidden = !plan.supported;
+    if (!macos) {
+      $("macos").innerHTML = (plan.versions || []).map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join("");
+    }
+    $("kextList").innerHTML = (plan.kexts || []).map(k => `<div class="row good"><i class="dot"></i><div><b>${esc(k.bundle.replace(".kext", ""))}</b><span>${esc(k.why)}</span></div></div>`).join("");
+    $("laterList").innerHTML = (plan.later || []).map(t => `<p>${esc(t)}</p>`).join("");
+  } catch (error) {
+    $("scanStatus").textContent = error.message;
+  }
+}
+$("rescan").onclick = scan;
+$("macos").onchange = scan;
+scan();
+
+async function refreshUSB() {
+  try {
+    const disks = await api("/api/usb");
+    $("disk").innerHTML = disks.map(d => `<option value="${d.number}">${esc(d.name)}, ${d.sizeGB} GB</option>`).join("");
+    $("usbNone").hidden = disks.length > 0;
+    updateBuild();
+  } catch (error) { showError(error.message); }
+}
+$("refreshUsb").onclick = refreshUSB;
+function updateBuild() { $("build").disabled = $("confirm").value !== "ERASE" || !$("disk").value; }
+$("confirm").oninput = updateBuild;
+$("disk").onchange = updateBuild;
+function showError(text) { $("buildError").hidden = false; $("buildErrorText").textContent = text; }
+
+$("build").onclick = async () => {
+  $("buildError").hidden = true;
+  $("build").disabled = true;
+  try {
+    await api("/api/build", { method: "POST", body: JSON.stringify({ disk: Number($("disk").value), macos: $("macos").value, confirm: $("confirm").value }) });
+    $("confirm").value = "";
+    $("progress").hidden = false;
+    poll();
+  } catch (error) { showError(error.message); updateBuild(); }
+};
+async function poll() {
+  const job = await api("/api/job");
+  $("stepText").textContent = job.step + (job.percent ? ` (${job.percent}%)` : "");
+  $("barFill").style.width = (job.percent || (job.done ? 100 : 4)) + "%";
+  if (job.error) { $("progress").hidden = true; showError(job.error); updateBuild(); return; }
+  if (job.done) {
+    $("progress").hidden = true;
+    $("buildDone").hidden = false;
+    $("doneText").textContent = `Everything is on ${job.root}, and OpenCore's validator and Apple's signature check both passed. Next, read the install steps. This setup still hasn't been boot-tested on your PC.`;
+    return;
+  }
+  setTimeout(poll, 1000);
+}
+</script>
+</body>
+</html>

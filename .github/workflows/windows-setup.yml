@@ -1,0 +1,64 @@
+name: Windows setup
+
+on:
+  push:
+    branches: [main, windows-setup-and-guide]
+    paths: ["windows/**", ".github/workflows/windows-setup.yml"]
+  pull_request:
+    paths: ["windows/**", ".github/workflows/windows-setup.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: windows/go.mod
+          cache-dependency-path: windows/go.sum
+      - name: Unit tests
+        run: go test ./...
+      - name: Build the exe
+        run: go build -trimpath -ldflags "-s -w" -o HackintoshSimplifiedSetup.exe .
+      - name: Scan this real Windows machine
+        run: ./HackintoshSimplifiedSetup.exe -selftest-scan
+      - name: Build and validate an EFI on Windows
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./HackintoshSimplifiedSetup.exe -selftest "$env:RUNNER_TEMP\efi"
+      - name: Check Apple's recovery server and signature
+        run: ./HackintoshSimplifiedSetup.exe -selftest-recovery
+      - name: Refuse a virtual disk by default, then format one with the real erase code
+        shell: pwsh
+        run: |
+          $vhd = Join-Path $env:RUNNER_TEMP 'test.vhdx'
+          "create vdisk file=`"$vhd`" maximum=20480 type=expandable`nselect vdisk file=`"$vhd`"`nattach vdisk" | Out-File -Encoding ascii "$env:RUNNER_TEMP\dp.txt"
+          diskpart /s "$env:RUNNER_TEMP\dp.txt"
+          Start-Sleep 3
+          $disk = Get-Disk | Where-Object { $_.Location -like "*test.vhdx*" -or $_.BusType -eq 'File Backed Virtual' } | Select-Object -Last 1
+          "Disk: $($disk.Number) $($disk.BusType) $([int]($disk.Size/1GB)) GB system=$($disk.IsSystem)"
+          $refused = & ./HackintoshSimplifiedSetup.exe -selftest-format $disk.Number 2>&1
+          if ($LASTEXITCODE -eq 0) { throw 'A non-USB disk was erased without the test override' }
+          "Correctly refused: $refused"
+          $env:HS_ALLOW_VIRTUAL_TEST_DISK = '1'
+          $out = & ./HackintoshSimplifiedSetup.exe -selftest-format $disk.Number 2>&1
+          if ($LASTEXITCODE -ne 0) { throw "Format failed: $out" }
+          "$out"
+          $letter = ("$out" -replace '.*formatted:\s*', '').Substring(0,1)
+          $vol = Get-Volume -DriveLetter $letter
+          "Volume: $($vol.FileSystem) $([int]($vol.Size/1GB)) GB label=$($vol.FileSystemLabel)"
+          if ($vol.FileSystem -ne 'FAT32') { throw 'Not FAT32' }
+          if ((Get-Disk -Number $disk.Number).PartitionStyle -ne 'GPT') { throw 'Not GPT' }
+          if ((Get-Partition -DriveLetter $letter).Size -gt 17GB) { throw 'Partition too large' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HackintoshSimplifiedSetup
+          path: windows/HackintoshSimplifiedSetup.exe
+          retention-days: 14
