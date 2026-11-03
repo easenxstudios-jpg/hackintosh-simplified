@@ -9,7 +9,12 @@ struct HackintoshSimplifiedApp: App {
     init() {
         // Started from Terminal with --scan, it prints the read-only report and quits.
         if CommandLine.arguments.contains("--scan") {
-            let facts = SystemScanner.scan()
+            var facts = SystemScanner.scan()
+            if let flag = CommandLine.arguments.firstIndex(of: "--efi"), CommandLine.arguments.count > flag + 1 {
+                let folder = URL(fileURLWithPath: CommandLine.arguments[flag + 1])
+                facts.efiMountPoint = folder.path
+                facts.config = try? OpenCoreConfig(contentsOf: EFIPaths(mountPoint: folder).config)
+            }
             print(SystemScanner.report(facts: facts, findings: Checks.run(facts)))
             exit(0)
         }

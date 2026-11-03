@@ -1,29 +1,33 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "display-p3:0.14000,0.33000,0.96000,1.00000",
-      "display-p3:0.05000,0.08000,0.38000,1.00000"
-    ],
-    "orientation" : {
-      "start" : { "x" : 0.5, "y" : 0 },
-      "stop" : { "x" : 0.5, "y" : 1 }
-    }
-  },
+  "fill" : "none",
   "groups" : [
     {
       "layers" : [
-        { "glass" : true, "image-name" : "check.svg", "name" : "Checkmark" },
-        { "glass" : false, "image-name" : "badge.svg", "name" : "Badge" }
+        { "glass" : true, "image-name" : "spark.svg", "name" : "Scan head" }
       ],
-      "shadow" : { "kind" : "layer-color", "opacity" : 0.6 },
-      "translucency" : { "enabled" : true, "value" : 0.2 }
+      "shadow" : { "kind" : "layer-color", "opacity" : 0.8 },
+      "translucency" : { "enabled" : false, "value" : 0 }
     },
     {
       "layers" : [
         { "glass" : true, "image-name" : "letter.svg", "name" : "Letter H" }
       ],
-      "shadow" : { "kind" : "neutral", "opacity" : 0.5 },
-      "translucency" : { "enabled" : true, "value" : 0.35 }
+      "shadow" : { "kind" : "neutral", "opacity" : 0.55 },
+      "translucency" : { "enabled" : true, "value" : 0.3 }
+    },
+    {
+      "layers" : [
+        { "glass" : true, "image-name" : "ring.svg", "name" : "Scan ring" }
+      ],
+      "shadow" : { "kind" : "layer-color", "opacity" : 0.7 },
+      "translucency" : { "enabled" : true, "value" : 0.25 }
+    },
+    {
+      "layers" : [
+        { "glass" : false, "image-name" : "aura.svg", "name" : "Aura" }
+      ],
+      "shadow" : { "kind" : "none", "opacity" : 0 },
+      "translucency" : { "enabled" : false, "value" : 0 }
     }
   ],
   "supported-platforms" : {

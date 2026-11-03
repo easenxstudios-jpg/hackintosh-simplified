@@ -141,8 +141,6 @@ public enum FixCatalog {
             Fix(id: "xhci-off", title: "Turn off XhciPortLimit", summary: "Turns off this quirk. Build a USB map as well if you depended on it, or some ports may stop working.", risk: .medium,
                 kind: auto(FixPlan(edits: [.setKernelQuirk("XhciPortLimit", false)]))),
 
-            Fix(id: "gpu-nvidia", title: "NVIDIA graphics", summary: "", needsRestart: false,
-                kind: .unavailable(reason: "macOS has no NVIDIA driver for modern cards. Community drivers exist for some cards, but this app can't install them. Check your card against the project you choose, and expect visual bugs.")),
             Fix(id: "gpu-whatevergreen", title: "Install WhateverGreen", summary: "Fixes the most common Intel and AMD graphics problems. Some setups also need device properties for their exact graphics chip.",
                 kind: auto(FixPlan(kexts: [liluOrigin, .github(repo: "acidanthera/WhateverGreen", kexts: [KextSpec("WhateverGreen.kext", after: ["Lilu.kext"])])]))),
 
@@ -188,6 +186,8 @@ public enum FixCatalog {
             Fix(id: "verbose-off", title: "Turn off verbose startup", summary: "Shows the Apple logo at startup again.",
                 kind: auto(FixPlan(edits: [.removeBootArg("-v")]))),
         ]
+        fixes += ConfigDoctor.fixes(facts: facts)
+        fixes += NullMothDoctor.fixes(facts: facts)
         if let device = facts.efiDevice {
             fixes.append(Fix(id: "mount-efi", title: "Open boot partition", summary: "Mounts \(device), the partition OpenCore started from. This only opens it and changes nothing.", needsRestart: false,
                              kind: auto(FixPlan(commands: ["/usr/sbin/diskutil mount \(Shell.quote(device))"]))))

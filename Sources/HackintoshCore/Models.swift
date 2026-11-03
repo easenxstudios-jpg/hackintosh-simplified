@@ -140,6 +140,7 @@ public struct SystemFacts: @unchecked Sendable {
     public var osBuild = ""
     public var model = ""
     public var cpu = ""
+    public var kernelVersion = ""
     public var openCoreVersion: String?
     public var bootArgs = ""
     public var sipEnabled: Bool?
@@ -160,6 +161,7 @@ public struct SystemFacts: @unchecked Sendable {
     public var efiDevice: String?
     public var efiMountPoint: String?
     public var config: OpenCoreConfig?
+    public var nullMoth = NullMothDoctor.Status()
     /// False when macOS's hardware report couldn't be read, so missing devices prove nothing.
     public var hardwareReportRead = true
 

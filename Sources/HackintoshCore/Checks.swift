@@ -11,6 +11,7 @@ public enum Checks {
         findings += sound(facts)
         findings += usb(facts)
         findings += graphics(facts)
+        findings += NullMothDoctor.check(facts)
         findings += ethernet(facts)
         findings += clock(facts)
         findings += power(facts)
@@ -40,14 +41,7 @@ public enum Checks {
         }
 
         if let config = f.config, let mount = f.efiMountPoint {
-            let paths = EFIPaths(mountPoint: URL(fileURLWithPath: mount))
-            let missing = config.enabledKexts.filter {
-                !FileManager.default.fileExists(atPath: paths.kexts.appendingPathComponent($0).path)
-            }
-            if !missing.isEmpty {
-                out.append(Finding("kext-missing", .boot, .problem, "Config lists kexts that aren't there",
-                                   "OpenCore expects these files but they're missing: \(missing.joined(separator: ", ")). This can stop the Mac starting."))
-            }
+            out += ConfigDoctor.check(config: config, paths: EFIPaths(mountPoint: URL(fileURLWithPath: mount)), kernel: f.kernelVersion)
             if config.kernelQuirk("XhciPortLimit") == true && f.macOSMajor >= 11 {
                 out.append(Finding("xhci-limit", .usb, .warning, "XhciPortLimit is on",
                                    "This OpenCore setting doesn't work properly on current macOS versions and can cause USB problems. A USB map is the replacement.",
@@ -227,7 +221,7 @@ public enum Checks {
                 out.append(Finding("gpu-\(gpu.name)", .graphics, .ok, "Graphics acceleration is on", "\(gpu.name) supports Metal."))
             } else {
                 out.append(Finding("gpu-\(gpu.name)", .graphics, .problem, "No graphics acceleration", "\(gpu.name) has no Metal support, so the Mac will feel slow.",
-                                   fixes: [gpu.name.localizedCaseInsensitiveContains("nvidia") ? "gpu-nvidia" : "gpu-whatevergreen"]))
+                                   fixes: [gpu.name.localizedCaseInsensitiveContains("nvidia") ? "nv-get-driver" : "gpu-whatevergreen"]))
             }
         }
         return out

@@ -53,9 +53,9 @@ a:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-ra
 .hero-pin { position: sticky; top: 48px; height: calc(100vh - 48px); height: calc(100svh - 48px); min-height: 620px; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: clamp(28px, 5vh, 56px); }
 .aurora { position: absolute; inset: -20%; pointer-events: none; }
 .aurora i { position: absolute; border-radius: 50%; filter: blur(90px); will-change: transform; }
-.aurora i:nth-child(1) { width: 52vw; height: 52vw; left: 26%; top: 34%; background: rgba(27, 79, 232, .55); animation: drift1 16s ease-in-out infinite alternate; }
-.aurora i:nth-child(2) { width: 30vw; height: 30vw; left: 54%; top: 52%; background: rgba(40, 214, 150, .24); animation: drift2 19s ease-in-out infinite alternate; }
-.aurora i:nth-child(3) { width: 26vw; height: 26vw; left: 22%; top: 56%; background: rgba(122, 88, 255, .28); animation: drift3 13s ease-in-out infinite alternate; }
+.aurora i:nth-child(1) { width: 52vw; height: 52vw; left: 26%; top: 34%; background: rgba(92, 50, 240, .55); animation: drift1 16s ease-in-out infinite alternate; }
+.aurora i:nth-child(2) { width: 30vw; height: 30vw; left: 54%; top: 52%; background: rgba(30, 190, 255, .3); animation: drift2 19s ease-in-out infinite alternate; }
+.aurora i:nth-child(3) { width: 26vw; height: 26vw; left: 22%; top: 56%; background: rgba(255, 60, 150, .18); animation: drift3 13s ease-in-out infinite alternate; }
 @keyframes drift1 { to { transform: translate3d(8vw, -6vh, 0) scale(1.15); } }
 @keyframes drift2 { to { transform: translate3d(-14vw, -10vh, 0) scale(.85); } }
 @keyframes drift3 { to { transform: translate3d(12vw, 8vh, 0) scale(1.2); } }
@@ -77,10 +77,10 @@ h1 { position: relative; margin: 6px 0 0; font-size: clamp(44px, 8.4vw, 96px); l
   transform: rotateX(calc(var(--r) * 54deg + var(--ty))) rotateY(var(--tx)) rotateZ(calc(var(--r) * -28deg)) scale(calc(1 - var(--r) * .1)); transition: --tx .2s; }
 .plane { position: absolute; inset: 0; backface-visibility: visible; transform: translateZ(calc(var(--e) * var(--z) * 1px)); }
 .plane img { width: 100%; height: 100%; }
-.p-base { --z: -130; border-radius: 22.4%; background: linear-gradient(180deg, #2554f5, #0d1461); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .5), inset 0 -1px 2px rgba(255, 255, 255, .15), 0 40px 90px rgba(20, 70, 240, .55); }
-.p-letter { --z: 20; filter: drop-shadow(0 12px 18px rgba(0, 0, 40, .45)); opacity: .96; }
-.p-badge { --z: 120; filter: drop-shadow(0 14px 22px rgba(0, 60, 40, .55)); }
-.p-check { --z: 190; filter: drop-shadow(0 6px 8px rgba(0, 50, 30, .4)); }
+.p-base { --z: -130; border-radius: 22.4%; overflow: hidden; background: #070a24; box-shadow: inset 0 1px 1px rgba(255, 255, 255, .5), inset 0 -1px 2px rgba(255, 255, 255, .15),  0 40px 110px rgba(110, 60, 255, .5); }
+.p-letter { --z: 110; filter: drop-shadow(0 12px 18px rgba(0, 0, 40, .45)); opacity: .96; }
+.p-badge { --z: 10; filter: drop-shadow(0 8px 24px rgba(60, 200, 255, .45)); }
+.p-check { --z: 190; filter: drop-shadow(0 0 14px rgba(160, 255, 225, .8)); }
 .p-glass { --z: 260; border-radius: 22.4%; border: 1px solid rgba(255, 255, 255, calc(var(--r) * .4 + .05)); background: linear-gradient(135deg, rgba(255, 255, 255, calc(.03 + var(--r) * .14)) 0%, rgba(255, 255, 255, 0) 46%), radial-gradient(90% 60% at var(--gx, 30%) var(--gy, 12%), rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 70%); }
 .caption { position: absolute; left: 0; right: 0; bottom: clamp(14px, 4vh, 40px); z-index: 4; margin: 0; padding-inline: 20px; font-size: clamp(22px, 3.4vw, 40px); font-weight: 600; letter-spacing: -.022em; line-height: 1.12; text-wrap: balance; opacity: var(--cap, 0); transform: translate3d(0, calc((1 - var(--cap, 0)) * 24px), 0); text-shadow: 0 2px 30px #000; }
 
@@ -199,7 +199,7 @@ footer a { color: #a1a1a6; }
     <a class="hide" href="#features">Features</a>
     <a class="hide" href="#install">Install</a>
     <a class="hide" href="https://github.com/easenxstudios-jpg/hackintosh-simplified">GitHub</a>
-    <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.1.1/HackintoshSimplified-0.1.1.dmg">Download</a>
+    <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.2.0/HackintoshSimplified-0.2.0.dmg">Download</a>
   </div>
 </nav>
 
@@ -211,17 +211,17 @@ footer a { color: #a1a1a6; }
       <h1>Your hackintosh.<br>Simplified.</h1>
       <p class="lede">One scan checks your Mac, explains what's wrong in plain words, and helps fix what it safely can.</p>
       <div class="cta">
-        <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.1.1/HackintoshSimplified-0.1.1.dmg">Download for Intel Macs</a>
+        <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.2.0/HackintoshSimplified-0.2.0.dmg">Download for Intel Macs</a>
         <a class="link" href="https://github.com/easenxstudios-jpg/hackintosh-simplified">View the source ›</a>
       </div>
-      <p class="fine">Version 0.1.1 · Early preview · macOS 13 or later</p>
+      <p class="fine">Version 0.2.0 · Early preview · macOS 13 or later</p>
       <div class="stage" id="stage">
         <div class="float">
-          <div class="stack" id="stack" role="img" aria-label="The app icon, a glass letter H with a green checkmark badge, separating into layers">
-            <div class="plane p-base"></div>
-            <div class="plane p-letter"><img src="layers/letter.svg" alt=""></div>
-            <div class="plane p-badge"><img src="layers/badge.svg" alt=""></div>
-            <div class="plane p-check"><img src="layers/check.svg" alt=""></div>
+          <div class="stack" id="stack" role="img" aria-label="The app icon, a glass letter H inside a glowing scan ring, separating into layers">
+            <div class="plane p-base"><img src="layers/aura.png" alt=""></div>
+            <div class="plane p-badge"><img src="layers/ring.png" alt=""></div>
+            <div class="plane p-letter"><img src="layers/letter.png" alt=""></div>
+            <div class="plane p-check"><img src="layers/spark.png" alt=""></div>
             <div class="plane p-glass"></div>
           </div>
         </div>
@@ -284,6 +284,9 @@ footer a { color: #a1a1a6; }
         <article class="card third rise" data-tilt><h3>See it before it happens</h3><p>Every fix lists its exact changes, and nothing is written until you approve.</p></article>
         <article class="card third rise" data-tilt><h3>Told straight</h3><p>When there's no known fix, the app says so instead of offering one that won't work.</p></article>
         <article class="card third rise" data-tilt><h3>Stays in its lane</h3><p>It never restarts your Mac, changes SIP, or generates serial numbers.</p></article>
+        <article class="card third rise" data-tilt><h3>One button</h3><p>Fix every safe problem at once. Riskier changes stay separate, so you decide.</p></article>
+        <article class="card third rise" data-tilt><h3>Knows OpenCore</h3><p>Checks your settings against how OpenCore reads them at startup, then explains problems in plain words.</p></article>
+        <article class="card third rise" data-tilt><h3>Knows NVIDIA</h3><p>Checks the NullMoth driver and points you to its official installer. It never bundles or edits the driver.</p></article>
       </div>
     </div>
   </section>
@@ -309,7 +312,7 @@ footer a { color: #a1a1a6; }
   <section class="closing wrap">
     <img class="rise" src="icon.png" alt="" width="120" height="120">
     <h2 class="h2 rise">Check your hackintosh.</h2>
-    <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.1.1/HackintoshSimplified-0.1.1.dmg">Download for Intel Macs</a>
+    <a class="pill" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases/download/v0.2.0/HackintoshSimplified-0.2.0.dmg">Download for Intel Macs</a>
     <a class="link" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases">All releases ›</a>
   </section>
 </main>

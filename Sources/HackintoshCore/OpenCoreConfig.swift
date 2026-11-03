@@ -7,6 +7,13 @@ public enum ConfigEdit: Equatable, Sendable {
     case addKext(KextEntry)
     case setACPIEnabled(pathContains: String, enabled: Bool)
     case setKernelQuirk(String, Bool)
+    case reorderKexts([ConfigDoctor.OrderPair])
+    case addNVRAMDelete(guid: String, name: String)
+    case setString(section: [String], key: String, value: String)
+    case setBool(section: [String], key: String, value: Bool)
+    case setKextExecutable(bundle: String, executable: String)
+    case turnOffDuplicateKexts
+    case setI386KextsToAny
 }
 
 public struct KextEntry: Equatable, Sendable {
@@ -175,12 +182,86 @@ public final class OpenCoreConfig: @unchecked Sendable {
             }
             return changes
 
+        case .reorderKexts(let pairs):
+            guard let list = kernelAdd else { throw FixError("This config has no Kernel > Add section.") }
+            var moved = false
+            for _ in 0...(list.count * list.count) {
+                var changed = false
+                for pair in pairs {
+                    let bundles = list.map { ($0 as? NSDictionary)?["BundlePath"] as? String ?? "" }
+                    guard let child = bundles.firstIndex(of: pair.child), let parent = bundles.lastIndex(of: pair.parent), child < parent else { continue }
+                    let item = list[child]
+                    list.removeObject(at: child)
+                    list.insert(item, at: parent)
+                    changed = true
+                    moved = true
+                }
+                if !changed { return moved ? ["Put drivers in the order they need to load"] : [] }
+            }
+            throw FixError("These drivers depend on each other in a loop, so they can't be put in order automatically.")
+
+        case .addNVRAMDelete(let guid, let name):
+            guard let nvram = dict("NVRAM") else { throw FixError("This config has no NVRAM section.") }
+            let delete = nvram["Delete"] as? NSMutableDictionary ?? NSMutableDictionary()
+            nvram["Delete"] = delete
+            let key = delete.allKeys.compactMap { $0 as? String }.first { $0.caseInsensitiveCompare(guid) == .orderedSame } ?? guid
+            let names = delete[key] as? NSMutableArray ?? NSMutableArray()
+            if names.contains(name) { return [] }
+            names.add(name)
+            delete[key] = names
+            return ["Replace old \(name) at each startup"]
+
+        case .setString(let section, let key, let value):
+            let target = try dictionary(at: section)
+            if target[key] as? String == value { return [] }
+            target[key] = value
+            return ["Set \(key) to \(value)"]
+
+        case .setBool(let section, let key, let value):
+            let target = try dictionary(at: section)
+            if target[key] as? Bool == value { return [] }
+            target[key] = value
+            return ["Set \(key) to \(value ? "on" : "off")"]
+
+        case .setKextExecutable(let bundle, let executable):
+            guard let entry = kernelAdd?.compactMap({ $0 as? NSMutableDictionary }).first(where: { $0["BundlePath"] as? String == bundle }) else { return [] }
+            if entry["ExecutablePath"] as? String == executable { return [] }
+            entry["ExecutablePath"] = executable
+            return ["Point \(bundle) at its program file"]
+
+        case .turnOffDuplicateKexts:
+            var seen = Set<String>()
+            var changes: [String] = []
+            for entry in (kernelAdd ?? []).compactMap({ $0 as? NSMutableDictionary }) where entry["Enabled"] as? Bool == true {
+                guard let bundle = entry["BundlePath"] as? String, !bundle.isEmpty else { continue }
+                if !seen.insert(bundle).inserted {
+                    entry["Enabled"] = false
+                    changes.append("Turn off the extra copy of \(bundle)")
+                }
+            }
+            return changes
+
+        case .setI386KextsToAny:
+            var changes: [String] = []
+            for entry in (kernelAdd ?? []).compactMap({ $0 as? NSMutableDictionary }) where entry["Enabled"] as? Bool == true && entry["Arch"] as? String == "i386" {
+                entry["Arch"] = "Any"
+                changes.append("Let \(entry["BundlePath"] as? String ?? "a driver") load on 64-bit Macs")
+            }
+            return changes
+
         case .setKernelQuirk(let name, let enabled):
             guard let quirks = dict("Kernel", "Quirks") else { throw FixError("This config has no Kernel > Quirks section.") }
             if quirks[name] as? Bool == enabled { return [] }
             quirks[name] = enabled
             return ["Set \(name) to \(enabled ? "on" : "off")"]
         }
+    }
+
+    private func dictionary(at path: [String]) throws -> NSMutableDictionary {
+        var current: NSMutableDictionary? = root
+        for key in path { current = current?[key] as? NSMutableDictionary }
+        guard let current else { throw FixError("This config has no \(path.joined(separator: " > ")) section.") }
+        return current
     }
 
     private func setBootArgs(_ arguments: [String]) throws {
