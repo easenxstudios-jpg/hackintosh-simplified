@@ -2,7 +2,7 @@
 
 A macOS app that checks a hackintosh and helps with common problems: Wi-Fi, Bluetooth, sound, USB, graphics, Ethernet, the clock, sleep and OpenCore settings.
 
-> **Early preview. Use it at your own risk.** The scan has run on one machine only. Fixes have been tested against a temporary test folder, never on a real EFI, and the macOS password prompt hasn't been tried. A bad boot change can stop your Mac starting.
+> **Early preview. Use it at your own risk.** The scan has run on one machine only. One system setting fix (turning off hibernation) has worked through the macOS password prompt on that machine. Boot fixes have only been tested against a temporary test folder, never on a real EFI. A bad boot change can stop your Mac starting.
 
 ## What it does
 
