@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hackintosh Simplified</title>
+<meta name="description" content="A free, open-source macOS app that checks a hackintosh and helps with Wi-Fi, Bluetooth, sound, USB and OpenCore problems.">
+<link rel="icon" href="icon.png">
+<style>
+/* Layout: one column that reads like a scan report, because the scan is the product. */
+:root { --bg:#f3f6ff; --fg:#0d1640; --muted:#4a5580; --line:#d3dcf5; --panel:#ffffff; --accent:#1f4fe0; --ok:#0a8a57; --warn:#a85f00; --bad:#c02a3a;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace; --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+@media (prefers-color-scheme: dark) { :root { --bg:#090e2a; --fg:#eaf0ff; --muted:#a3aed6; --line:#26305f; --panel:#111840; --accent:#7ea2ff; --ok:#4fdca5; --warn:#f2b45a; --bad:#ff8592; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.6 var(--sans); padding-inline:max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width:720px; margin-inline:auto; padding-block:56px; display:grid; gap:48px; }
+header { display:grid; gap:16px; justify-items:start; }
+header img { width:128px; height:128px; }
+h1 { margin:0; font-size:clamp(2.2rem,7vw,3.4rem); line-height:1.05; letter-spacing:-.02em; text-wrap:balance; }
+h2 { margin:0 0 12px; font-size:1.3rem; }
+p { margin:0; max-width:62ch; color:var(--muted); }
+.actions { display:flex; flex-wrap:wrap; gap:12px; }
+a { color:var(--accent); }
+a:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+.btn { padding:12px 20px; border-radius:10px; border:1px solid var(--accent); font-weight:600; text-decoration:none; }
+.btn.primary { background:var(--accent); color:var(--bg); }
+.scan { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 20px; font:14px/1.5 var(--mono); overflow-x:auto; }
+.scan div { display:grid; grid-template-columns:18ch 1fr; gap:12px; padding-block:6px; min-width:460px; }
+.ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+.note { border:1px solid var(--warn); border-radius:12px; padding:16px 20px; }
+.note p { color:var(--fg); }
+ol, ul { margin:0; padding-left:1.3em; color:var(--muted); display:grid; gap:8px; max-width:62ch; }
+footer { color:var(--muted); font-size:15px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon.png" alt="Hackintosh Simplified icon: a white letter H with a green checkmark badge" width="128" height="128">
+    <h1>Hackintosh Simplified</h1>
+    <p>A free, open-source Mac app that checks your hackintosh, tells you what's wrong in plain words, and helps fix what it safely can.</p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/easenxstudios-jpg/hackintosh-simplified/releases">Download for Intel Macs</a>
+      <a class="btn" href="https://github.com/easenxstudios-jpg/hackintosh-simplified">View source on GitHub</a>
+    </div>
+  </header>
+
+  <section class="note" aria-label="Preview warning">
+    <p><strong>Early preview. Use it at your own risk.</strong> The scan has run on one machine. Boot fixes haven't been tried on a real EFI, and a bad boot change can stop your Mac starting. Keep a bootable USB with a working OpenCore.</p>
+  </section>
+
+  <section>
+    <h2>What a scan looks like</h2>
+    <div class="scan" role="img" aria-label="Example scan results">
+      <div><span class="ok">Working</span><span>Sound, USB 3 at 5 Gb/s, Metal graphics</span></div>
+      <div><span class="warn">Needs attention</span><span>Ethernet limited to 100 Mb/s</span></div>
+      <div><span class="warn">Needs attention</span><span>Experimental Realtek Wi-Fi driver</span></div>
+      <div><span class="bad">Problem</span><span>AirDrop: no awdl0 link, no software fix known</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What it does</h2>
+    <ul>
+      <li>Scans without changing anything. It needs no password and doesn't read your serial number.</li>
+      <li>Shows every change before applying a fix, and backs up your whole EFI before boot changes.</li>
+      <li>Guides you through jobs that depend on your machine, like USB maps and Wi-Fi drivers.</li>
+      <li>Says when it has no fix, instead of offering one that won't work.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Install</h2>
+    <ol>
+      <li>Download the <code>.dmg</code>. It needs an Intel processor and macOS 13 or later.</li>
+      <li>Open it and drag the app to Applications.</li>
+      <li>Open the app. macOS blocks it the first time, because it isn't notarized.</li>
+      <li>On macOS 15 or later, click <strong>Open Anyway</strong> in System Settings &gt; Privacy &amp; Security. On macOS 13 or 14, right-click the app and choose Open.</li>
+    </ol>
+  </section>
+
+  <footer>MIT licensed. Not affiliated with Apple, OpenCore or any driver project. Installing macOS on non-Apple hardware may break Apple's software license, so check what applies to you.</footer>
+</main>
+</body>
+</html>

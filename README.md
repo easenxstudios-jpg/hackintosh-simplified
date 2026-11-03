@@ -4,6 +4,8 @@ A macOS app that checks a hackintosh and helps with common problems: Wi-Fi, Blue
 
 > **Early preview. Use it at your own risk.** The scan has run on one machine only. One system setting fix (turning off hibernation) has worked through the macOS password prompt on that machine. Boot fixes have only been tested against a temporary test folder, never on a real EFI. A bad boot change can stop your Mac starting.
 
+**Website:** https://easenxstudios-jpg.github.io/hackintosh-simplified/
+
 ## What it does
 
 - **Scans without changing anything.** It needs no password, and it doesn't read your serial number.
@@ -39,7 +41,7 @@ The download doesn't include the patched Realtek Bluetooth kexts, so that one fi
 
 ## Build
 
-You need Xcode.
+You need Xcode 26 or later.
 
 ```bash
 zsh build-app.sh
