@@ -162,6 +162,7 @@ public struct SystemFacts: @unchecked Sendable {
     public var efiMountPoint: String?
     public var config: OpenCoreConfig?
     public var nullMoth = NullMothDoctor.Status()
+    public var wifiSpeed: SpeedResult?
     /// False when macOS's hardware report couldn't be read, so missing devices prove nothing.
     public var hardwareReportRead = true
 

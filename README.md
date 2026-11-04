@@ -9,6 +9,7 @@ A macOS app that checks a hackintosh and helps with common problems: Wi-Fi, Blue
 ## What it does
 
 - **Scans without changing anything.** It needs no password, and it doesn't read your serial number.
+- **Keeps results current.** While it's open, it re-checks every 5 minutes and when your network changes. It measures Wi-Fi speed when it starts, when the network changes and every 30 minutes, which uses some data each time.
 - **Applies fixes it can automate.** You see the changes first. Boot changes back up your whole EFI, and macOS's own dialog asks for your password.
 - **Fixes safe problems with one button.** Riskier changes stay separate, so you decide.
 - **Checks OpenCore settings.** The rules were worked out from OpenCore's documentation and source, and checked against 1.0.9. Newer versions may differ. If OpenCore Vault protects your boot files, the app won't edit them.

@@ -97,15 +97,7 @@ public enum Checks {
             return out
         }
 
-        if f.kextLoaded("rtw89") {
-            out.append(Finding("wifi-rtw89", .wifi, .warning, "Using an experimental Realtek driver",
-                               "AirPort_RTW89 is a preview driver. On one tested RTL8852CE it joined networks but only reached about 10 to 20 KB/s, so compare your speed with another device.",
-                               fixes: ["wifi-realtek-slow"]))
-        } else if interface.ipv4 != nil {
-            out.append(Finding("wifi-ok", .wifi, .ok, "Wi-Fi is connected", "\(label) on \(interface.device)."))
-        } else {
-            out.append(Finding("wifi-idle", .wifi, .info, "Wi-Fi driver is running", "\(label) on \(interface.device). It's not connected to a network right now."))
-        }
+        out.append(WiFiSpeed.finding(f, label: label, interface: interface))
 
         if let wired = f.interfaces.first(where: { $0.port != "Wi-Fi" && $0.ipv4 != nil && $0.active }), let wifiIP = interface.ipv4,
            subnet(wifiIP) == subnet(wired.ipv4 ?? "") {

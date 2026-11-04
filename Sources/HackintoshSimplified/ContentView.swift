@@ -55,10 +55,13 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItemGroup {
                     if model.scanning { ProgressView().controlSize(.small) }
+                    Button { Task { await model.testSpeed() } } label: { Label("Test Wi-Fi Speed", systemImage: "speedometer") }
+                        .help("Measure Wi-Fi now. This uses some data.")
+                        .disabled(model.testingSpeed || model.facts.flatMap(WiFiSpeed.testableInterface) == nil)
                     Button { model.copyReport() } label: { Label("Copy Report", systemImage: "doc.on.doc") }
                         .help("Copy a report with addresses and names removed")
                         .disabled(model.facts == nil)
-                    Button { Task { await model.scan() } } label: { Label("Scan Again", systemImage: "arrow.clockwise") }
+                    Button { Task { await model.scan(); await model.testSpeed() } } label: { Label("Scan Again", systemImage: "arrow.clockwise") }
                         .disabled(model.scanning)
                 }
             }
@@ -102,6 +105,11 @@ struct OverviewView: View {
                         Text("macOS \(facts.osVersion) (\(facts.osBuild)) · \(facts.model) · \(facts.cpu)")
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
+                        if let checked = model.lastChecked {
+                            Text(model.testingSpeed ? "Checked at \(checked.formatted(date: .omitted, time: .shortened)). Testing Wi-Fi speed…" : "Checked at \(checked.formatted(date: .omitted, time: .shortened)). Updates by itself while this app is open.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 if model.restartNeeded {

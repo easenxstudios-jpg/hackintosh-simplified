@@ -630,3 +630,57 @@ final class ProblemGuideTests: XCTestCase {
         }
     }
 }
+
+final class WiFiSpeedTests: XCTestCase {
+    private func facts(ip: String? = "10.0.0.3", speed: SpeedResult? = nil, rtw89: Bool = true) -> SystemFacts {
+        var f = SystemFacts()
+        f.pci = [PCIDevice(name: "w", vendor: 0x10ec, device: 0xc852, classCode: 0x0280)]
+        f.interfaces = [NetworkInterface(port: "Wi-Fi", device: "en1", ipv4: ip, active: ip != nil, media: "")]
+        if rtw89 { f.kexts["com.rtw89.driver"] = "0.5.0" }
+        f.wifiSpeed = speed
+        return f
+    }
+
+    private func wifi(_ f: SystemFacts) -> Finding? {
+        Checks.run(f).first { $0.category == .wifi }
+    }
+
+    private func result(_ down: Double) -> SpeedResult {
+        SpeedResult(downloadMbps: down, uploadMbps: 35, latencyMs: 105, date: Date())
+    }
+
+    func testFastWiFiIsReportedAsWorkingWithItsRealSpeed() {
+        let finding = wifi(facts(speed: result(50)))
+        XCTAssertEqual(finding?.status, .ok)
+        XCTAssertTrue(finding?.detail.contains("50 Mb/s down") == true)
+        XCTAssertEqual(finding?.fixIDs, [])
+    }
+
+    func testSlowWiFiIsAWarningWithItsRealSpeed() {
+        let finding = wifi(facts(speed: result(0.1)))
+        XCTAssertEqual(finding?.id, "wifi-slow")
+        XCTAssertEqual(finding?.status, .warning)
+        XCTAssertEqual(finding?.fixIDs, ["wifi-realtek-slow"])
+    }
+
+    func testNoFinishedTestMeansNoSpeedClaim() {
+        for finding in [wifi(facts()), wifi(facts(ip: nil))] {
+            XCTAssertEqual(finding?.status, .info)
+            XCTAssertFalse(finding?.detail.contains("Mb/s") == true)
+            XCTAssertFalse(finding?.detail.contains("KB/s") == true, "old fixed results must be gone")
+        }
+    }
+
+    func testOnlyAJoinedInterfaceIsTested() {
+        XCTAssertEqual(WiFiSpeed.testableInterface(facts()), "en1")
+        XCTAssertNil(WiFiSpeed.testableInterface(facts(ip: nil)))
+    }
+
+    func testParsesNetworkQuality() {
+        let parsed = WiFiSpeed.parse(#"{"dl_throughput":50100000,"ul_throughput":38200000,"base_rtt":106.2,"interface_name":"en1"}"#)
+        XCTAssertEqual(parsed?.downloadMbps ?? 0, 50.1, accuracy: 0.01)
+        XCTAssertEqual(parsed?.uploadMbps ?? 0, 38.2, accuracy: 0.01)
+        XCTAssertNil(WiFiSpeed.parse("not json"))
+        XCTAssertNil(WiFiSpeed.parse(#"{"base_rtt":10}"#), "a failed test mustn't look like 0 Mb/s")
+    }
+}
