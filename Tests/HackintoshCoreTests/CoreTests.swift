@@ -684,3 +684,56 @@ final class WiFiSpeedTests: XCTestCase {
         XCTAssertNil(WiFiSpeed.parse(#"{"base_rtt":10}"#), "a failed test mustn't look like 0 Mb/s")
     }
 }
+
+final class NullMothAudioTests: XCTestCase {
+    private func facts(_ outputs: [AudioOutput], kexts: [String]) -> SystemFacts {
+        var f = SystemFacts()
+        f.osVersion = "26.7.2"
+        f.audioOutputs = outputs
+        f.hasBattery = true
+        for kext in kexts { f.kexts[kext] = "1" }
+        return f
+    }
+
+    private let internalOut = AudioOutput(name: "Realtek ALC256 (Internal Analog)", source: "spaudio_default", builtIn: true)
+    private let headphones = AudioOutput(name: "Realtek ALC256 (Left Analog Headphones)", source: "spaudio_default", builtIn: true)
+
+    func testRecognizesItsDevicesButNotHDMI() {
+        let unknown = "coreaudio_device_type_unknown"
+        XCTAssertTrue(SystemScanner.isOnboardAudio(name: "Realtek ALC256 (Internal Analog)", transport: unknown, nullMothAudio: true))
+        XCTAssertFalse(SystemScanner.isOnboardAudio(name: "NVIDIA (0x00ad) (HDMI/DP 8ch)", transport: unknown, nullMothAudio: true))
+        XCTAssertFalse(SystemScanner.isOnboardAudio(name: "Realtek ALC256 (Internal Analog)", transport: unknown, nullMothAudio: false))
+        XCTAssertFalse(SystemScanner.isOnboardAudio(name: "USB DAC", transport: "coreaudio_device_type_usb", nullMothAudio: true))
+        XCTAssertTrue(SystemScanner.isOnboardAudio(name: "Built-in Speaker", transport: "coreaudio_device_type_builtin", nullMothAudio: false))
+    }
+
+    func testScannerUsesTheRule() {
+        var f = SystemFacts()
+        f.kexts["com.nullmoth.NMXAudio"] = "1"
+        SystemScanner.applyProfiler(#"{"SPAudioDataType":[{"_items":[{"_name":"Realtek ALC256 (Internal Analog)","coreaudio_device_output":2,"coreaudio_device_transport":"coreaudio_device_type_unknown"},{"_name":"NVIDIA (HDMI/DP 8ch)","coreaudio_device_output":2,"coreaudio_device_transport":"coreaudio_device_type_unknown"}]}]}"#, to: &f)
+        XCTAssertEqual(f.audioOutputs.map(\.builtIn), [true, false])
+    }
+
+    func testNoFalseAlarmWithNullMothAudio() {
+        let found = Checks.sound(facts([internalOut, headphones], kexts: ["com.nullmoth.NMXAudio"]))
+        XCTAssertEqual(found.map(\.id), ["sound-ok"])
+        XCTAssertEqual(found[0].fixIDs, [], "layouts don't apply to this driver")
+    }
+
+    func testTwoDriversAreExplainedNotAlarmed() {
+        let found = Checks.sound(facts([internalOut, headphones], kexts: ["com.nullmoth.NMXAudio", "cn.laobamac.SimpleHDA"]))
+        XCTAssertEqual(found.map(\.id), ["sound-ok", "sound-two-drivers"])
+        XCTAssertEqual(found[1].status, .info)
+    }
+
+    func testNeverOffersSimpleHDAOverNullMothAudio() {
+        let found = Checks.sound(facts([], kexts: ["com.nullmoth.NMXAudio"]))
+        XCTAssertEqual(found.first?.id, "sound-none")
+        XCTAssertFalse(found.first?.fixIDs.contains("sound-simplehda") ?? true)
+        XCTAssertTrue(Checks.sound(facts([], kexts: [])).first?.fixIDs.contains("sound-simplehda") == true)
+    }
+
+    func testHeadphonesOnlyStillWarns() {
+        XCTAssertEqual(Checks.sound(facts([headphones], kexts: ["com.nullmoth.NMXAudio"])).first?.id, "sound-speakers")
+    }
+}
