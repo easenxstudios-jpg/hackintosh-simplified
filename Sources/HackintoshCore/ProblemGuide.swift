@@ -112,8 +112,8 @@ public enum ProblemGuide {
         // Sound
         entry("Sound", "No sound at all on macOS Tahoe",
               "Tahoe removed Apple's driver for most hackintosh audio chips, so AppleALC alone no longer works.",
-              ["Run a scan and use the Sound fix, which adds SimpleHDA."],
-              "no sound audio tahoe simplehda applealc applehda", audio),
+              ["If you use an NVIDIA card with NullMoth 2.7 or later, its package includes an audio driver, so update with its 1401 app first.", "Otherwise, run a scan and use the Sound fix, which adds SimpleHDA."],
+              "no sound audio tahoe simplehda applealc applehda nmxaudio nullmoth", audio),
         entry("Sound", "Only headphones work, or speakers are missing",
               "The audio layout number doesn't match your laptop's wiring.",
               ["Use Change Audio Layout in the Sound section.", "Try the layouts listed for your codec, restarting after each one."],

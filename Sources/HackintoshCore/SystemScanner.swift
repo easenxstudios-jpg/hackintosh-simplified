@@ -175,7 +175,7 @@ public enum SystemScanner {
                 facts.audioOutputs.append(AudioOutput(
                     name: item["_name"] as? String ?? "Output",
                     source: item["coreaudio_output_source"] as? String ?? "",
-                    builtIn: (item["coreaudio_device_transport"] as? String ?? "").contains("builtin")))
+                    builtIn: isOnboardAudio(name: item["_name"] as? String ?? "", transport: item["coreaudio_device_transport"] as? String ?? "", nullMothAudio: facts.kextLoaded("NMXAudio"))))
             }
         }
 
@@ -206,6 +206,13 @@ public enum SystemScanner {
             if let children = item["_items"] { walk(children) }
         }
         if let usb = root["SPUSBHostDataType"] { walk(usb) }
+    }
+
+    /// NullMoth's audio driver reports its outputs with an unknown transport, so those count as onboard unless they're HDMI or DisplayPort.
+    public static func isOnboardAudio(name: String, transport: String, nullMothAudio: Bool) -> Bool {
+        if transport.contains("builtin") { return true }
+        guard nullMothAudio, transport.contains("unknown") else { return false }
+        return !["HDMI", "DISPLAYPORT", "/DP"].contains { name.uppercased().contains($0) }
     }
 
     public static func parseLinkSpeed(_ text: String) -> Double {

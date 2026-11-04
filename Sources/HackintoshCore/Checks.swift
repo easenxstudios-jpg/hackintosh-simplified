@@ -169,23 +169,38 @@ public enum Checks {
     static func sound(_ f: SystemFacts) -> [Finding] {
         guard f.hardwareReportRead else { return [unreadable("sound-unknown", .sound)] }
         let builtIn = f.audioOutputs.filter { $0.builtIn }
+        let nullMothAudio = f.kextLoaded("NMXAudio")
         let controller = f.pci.first { $0.classCode == 0x0403 && $0.vendor == 0x8086 }
         if builtIn.isEmpty {
             var fixes: [String] = []
-            if f.macOSMajor >= 26 && !f.kextLoaded("SimpleHDA") { fixes.append("sound-simplehda") }
+            if f.macOSMajor >= 26 && !f.kextLoaded("SimpleHDA") && !nullMothAudio { fixes.append("sound-simplehda") }
             if !f.kextLoaded("AppleALC") { fixes.append("sound-applealc") }
-            fixes.append("sound-layout")
-            let reason = f.macOSMajor >= 26
+            if !nullMothAudio { fixes.append("sound-layout") }
+            let reason = nullMothAudio
+                ? "NullMoth's audio driver is running, but macOS doesn't list a built-in output. Check Sound settings, then restart."
+                : f.macOSMajor >= 26
                 ? "macOS Tahoe removed Apple's built-in driver for this kind of audio chip, so AppleALC alone no longer works and SimpleHDA is needed as well."
                 : "No built-in audio output is available."
             return [Finding("sound-none", .sound, .problem, "No built-in sound", reason + (controller == nil ? " No Intel audio controller was seen either." : ""), fixes: fixes)]
         }
-        if !builtIn.contains(where: { $0.source.localizedCaseInsensitiveContains("speaker") }) && f.hasBattery {
-            return [Finding("sound-speakers", .sound, .warning, "Laptop speakers aren't listed",
-                            "Only \(builtIn.map(\.name).joined(separator: ", ")) is available. A different audio layout usually fixes this.", fixes: ["sound-layout"])]
+        let names = builtIn.map(\.name).joined(separator: ", ")
+        let hasSpeakers = builtIn.contains { $0.source.localizedCaseInsensitiveContains("speaker") || $0.name.localizedCaseInsensitiveContains("speaker") || $0.name.localizedCaseInsensitiveContains("internal") }
+        var out: [Finding] = []
+        if !hasSpeakers && f.hasBattery {
+            out.append(Finding("sound-speakers", .sound, .warning, "Laptop speakers aren't listed",
+                               "Only \(names) is available." + (nullMothAudio ? " Check Sound settings, and follow NullMoth's guide if they stay missing." : " A different audio layout usually fixes this."),
+                               fixes: nullMothAudio ? ["nv-get-help"] : ["sound-layout"]))
+        } else if nullMothAudio {
+            out.append(Finding("sound-ok", .sound, .ok, "Sound is available", "Outputs: \(names). NullMoth's audio driver is running them. This app can't hear them, so play a sound to check."))
+        } else {
+            let layout = f.config?.layoutID.map { " Audio layout \($0)." } ?? ""
+            out.append(Finding("sound-ok", .sound, .ok, "Sound is available", "Outputs: \(names).\(layout) If there's no sound, try another layout.", fixes: ["sound-layout"]))
         }
-        let layout = f.config?.layoutID.map { " Audio layout \($0)." } ?? ""
-        return [Finding("sound-ok", .sound, .ok, "Sound is available", "Outputs: \(builtIn.map(\.name).joined(separator: ", ")).\(layout) If there's no sound, try another layout.", fixes: ["sound-layout"])]
+        if nullMothAudio && f.kextLoaded("SimpleHDA") {
+            out.append(Finding("sound-two-drivers", .sound, .info, "Two audio drivers are running",
+                               "NullMoth's audio driver and SimpleHDA are both loaded. If your sound works, you can leave this alone. If it's glitchy or missing, turning SimpleHDA off in your OpenCore config is the first thing to try."))
+        }
+        return out
     }
 
     static func usb(_ f: SystemFacts) -> [Finding] {
