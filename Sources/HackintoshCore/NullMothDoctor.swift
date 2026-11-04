@@ -199,6 +199,8 @@ public enum NullMothDoctor {
     // MARK: Reading this Mac
 
     static let bootGUID = "7C436110-AB2A-4BBB-A880-FE41995C9F82"
+    nonisolated(unsafe) private static var cachedLatest: String?
+    nonisolated(unsafe) private static var cachedLatestDate = Date.distantPast
 
     static func scan() -> Status {
         var status = Status()
@@ -217,8 +219,14 @@ public enum NullMothDoctor {
         status.startFailures = SystemScanner.nvram("\(bootGUID):nullmoth-nv-starts").flatMap(parseCount)
         status.removalPending = SystemScanner.nvram("\(bootGUID):nullmoth-remove") != nil
         status.powerState = parsePowerState(Shell.run("/usr/sbin/ioreg", ["-l", "-w0"], timeout: 15, includeErrors: false).output)
-        status.latestVersion = parseLatest(Shell.run("/usr/bin/curl", ["-sS", "-m", "5", "-H", "User-Agent: HackintoshSimplified",
-                                                                       "https://api.github.com/repos/nullmoth/nvidia-macos-driver/releases/latest"], timeout: 8, includeErrors: false).output)
+        if cachedLatest == nil || Date().timeIntervalSince(cachedLatestDate) > 6 * 3600 {
+            if let latest = parseLatest(Shell.run("/usr/bin/curl", ["-sS", "-m", "5", "-H", "User-Agent: HackintoshSimplified",
+                                                                       "https://api.github.com/repos/nullmoth/nvidia-macos-driver/releases/latest"], timeout: 8, includeErrors: false).output) {
+                cachedLatest = latest
+                cachedLatestDate = Date()
+            }
+        }
+        status.latestVersion = cachedLatest
         return status
     }
 
